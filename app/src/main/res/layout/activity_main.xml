@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context=".MainActivity">
+
+    <Button
+        android:id="@+id/btn_cpu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="设备的CPU架构" />
+
+    <Button
+        android:id="@+id/btn_audio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="音频相关" />
+
+    <Button
+        android:id="@+id/btn_protocol"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="支持的协议" />
+
+    <Button
+        android:id="@+id/btn_format"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="支持的封装格式" />
+
+    <Button
+        android:id="@+id/btn_codec"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="支持的编解码器" />
+
+
+    <Button
+        android:id="@+id/btn_filter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="支持的滤镜" />
+
+    <Button
+        android:id="@+id/btn_configure"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="类库的配置信息" />
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="转换视频格式" />
+
+    <Button
+        android:id="@+id/btn_gl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="OpenGL库" />
+
+    <Button
+        android:id="@+id/btn_camera"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="相机" />
+
+    <Button
+        android:id="@+id/btn_other"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="转换" />
+
+</LinearLayout>
