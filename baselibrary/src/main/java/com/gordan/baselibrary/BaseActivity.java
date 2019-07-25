@@ -1,19 +1,20 @@
-package com.gordan.helloffmpeg;
+package com.gordan.baselibrary;
 
-import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.Toast;
 
 import butterknife.ButterKnife;
 
-public abstract class BaseActivity extends Activity {
+public abstract class BaseActivity extends FragmentActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        BaseApplication.getInstance().pushActivity(this);
         int resId=inflateResId();
         if(resId>0)
         {
@@ -22,7 +23,7 @@ public abstract class BaseActivity extends Activity {
         }
     }
 
-    Handler mHandler=new Handler(new Handler.Callback() {
+    protected Handler mHandler=new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
 
@@ -71,6 +72,7 @@ public abstract class BaseActivity extends Activity {
     protected void onDestroy() {
         mHandler.removeCallbacksAndMessages(null);
         ButterKnife.unbind(this);
+        BaseApplication.getInstance().removeActivity(this);
         super.onDestroy();
     }
 }
