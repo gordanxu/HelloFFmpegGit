@@ -101,13 +101,14 @@ public class Triangle {
 
         colorHandle=GLES20.glGetUniformLocation(mProgram,"vColor");
 
-
         //改变colorHandle的值
         //https://blog.csdn.net/wangyuchun_799/article/details/7742787
 
         GLES20.glUniform4fv(colorHandle,1,color,0);
 
-        //绘制三角形
+        //绘制三角形 GL_TRIANGLES    GL_TRIANGLE_STRIP   GL_TRIANGLE_FAN
+        //点的连接方式 绘制多个三角形顶点的链接方式 第一个三角形的最后一个点和第二个三角形的第一个点链接
+        // 第一个三角形的中间点和第二个三角形的中间点链接 。。。。
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES,0,vertexCount);
 
 

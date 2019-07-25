@@ -41,9 +41,7 @@ public class MusicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
 
-
         View contentView = LayoutInflater.from(viewGroup.getContext()).inflate(mResId, viewGroup, false);
-
 
         return new MusicViewHolder(contentView);
     }
@@ -51,12 +49,28 @@ public class MusicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
 
-        MusicModel model=musicList.get(i);
+        MusicModel model = musicList.get(i);
 
-        MusicViewHolder myHolder=(MusicViewHolder) viewHolder;
+        MusicViewHolder myHolder = (MusicViewHolder) viewHolder;
 
         myHolder.tvName.setText(model.name);
 
+        if (this.listener != null) {
+
+            myHolder.ivPlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    listener.onItemClick(viewHolder.itemView, viewHolder.getLayoutPosition());
+                }
+            });
+
+            myHolder.ivUse.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    listener.onItemUseClick(viewHolder.itemView,viewHolder.getLayoutPosition());
+                }
+            });
+        }
 
     }
 
@@ -65,6 +79,17 @@ public class MusicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         return musicList.size();
     }
 
+    private ItemClickInterface listener;
+
+    public void setItemClickListener(ItemClickInterface listener) {
+        this.listener = listener;
+    }
+
+    public interface ItemClickInterface {
+        public void onItemClick(View item, int position);
+        public void onItemUseClick(View item, int position);
+
+    }
 
     static class MusicViewHolder extends RecyclerView.ViewHolder {
 
@@ -77,7 +102,7 @@ public class MusicAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         public MusicViewHolder(@NonNull View itemView) {
             super(itemView);
-            ButterKnife.bind(this,itemView);
+            ButterKnife.bind(this, itemView);
         }
     }
 }

@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 
+import com.gordan.baselibrary.BaseActivity;
 import com.gordan.helloffmpeg.view.EmptyControlVideo;
 
 import butterknife.Bind;

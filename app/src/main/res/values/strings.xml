@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">海豚视频</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="about">
+
+
+        这是一个音视频编辑的小工具，是本人学习多媒体/音视频模块的练手项目，应用中集成了开源的多媒体库ffmpeg,h264,aac,mp3等,可以对视频进行音视频源文件的抽取，合并
+        替换等操作，也可以添加水印，滤镜等特效，，仅供参考和学习
+        \n
+        应用作者：睡着的海豚
+        \n
+        联系方式：gordanxu@sina.com
+        \n
+        项目地址：https://github.com/gordanxu/HelloFFmpegGit
+    </string>
 </resources>

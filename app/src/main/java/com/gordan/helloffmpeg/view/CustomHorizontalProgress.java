@@ -11,6 +11,8 @@ import android.widget.ProgressBar;
 
 import com.gordan.helloffmpeg.R;
 
+//源：https://github.com/chenshouyin/CustomProgress
+
 public class CustomHorizontalProgress extends ProgressBar
 {
     //默认值

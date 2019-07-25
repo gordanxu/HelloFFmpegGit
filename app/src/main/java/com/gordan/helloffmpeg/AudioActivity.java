@@ -1,7 +1,6 @@
 package com.gordan.helloffmpeg;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -11,12 +10,13 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
+import com.gordan.baselibrary.BaseActivity;
 import com.gordan.helloffmpeg.util.PcmToWavUtil;
 
 import java.io.File;
@@ -25,10 +25,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import butterknife.Bind;
-import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class AudioActivity extends Activity {
+public class AudioActivity extends BaseActivity {
 
     final static String TAG = AudioActivity.class.getSimpleName();
 
@@ -59,12 +58,22 @@ public class AudioActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_audio);
-        ButterKnife.bind(this);
+
+
 
         sdcardFile = Environment.getExternalStorageDirectory();
     }
 
+
+    @Override
+    protected int inflateResId() {
+        return R.layout.activity_audio;
+    }
+
+    @Override
+    protected void handleBaseMessage(Message message) {
+
+    }
 
     @OnClick({R.id.btn_audio, R.id.btn_convert, R.id.btn_play})
     public void onViewClick(View view) {
@@ -150,7 +159,8 @@ public class AudioActivity extends Activity {
                     wavFile.delete();
                 }
                 pcmToWavUtil.pcmToWav(pcmFile.getAbsolutePath(), wavFile.getAbsolutePath());
-                showToast("转码完成！");
+
+                showText("转码完成");
 
                 break;
 
@@ -167,9 +177,6 @@ public class AudioActivity extends Activity {
 
     }
 
-    public void showToast(String text) {
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show();
-    }
 
 
     FileInputStream fileInputStream;

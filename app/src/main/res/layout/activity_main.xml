@@ -15,12 +15,6 @@
         android:text="设备的CPU架构" />
 
     <Button
-        android:id="@+id/btn_audio"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="音频相关" />
-
-    <Button
         android:id="@+id/btn_protocol"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -63,11 +57,7 @@
         android:layout_height="wrap_content"
         android:text="OpenGL库" />
 
-    <Button
-        android:id="@+id/btn_camera"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="相机" />
+
 
     <Button
         android:id="@+id/btn_other"

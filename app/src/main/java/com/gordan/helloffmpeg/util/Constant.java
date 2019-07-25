@@ -12,5 +12,8 @@ public class Constant {
 
     public static final int MSG_VIDEO_PROGRESS=10011;
 
+    public static final int MSG_VIDEO_MUSIC_FINISH=10012;
+
+
 
 }

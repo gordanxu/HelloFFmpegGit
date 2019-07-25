@@ -3,6 +3,7 @@ package com.gordan.helloffmpeg;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -47,9 +48,13 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.PopupWindow;
 
+import com.afollestad.materialdialogs.MaterialDialog;
+import com.gordan.baselibrary.BaseActivity;
 import com.gordan.helloffmpeg.adapter.MusicAdapter;
 import com.gordan.helloffmpeg.model.MusicModel;
 import com.gordan.helloffmpeg.util.Constant;
+import com.gordan.helloffmpeg.util.FfmpegUtil;
+import com.gordan.helloffmpeg.util.FileUtil;
 import com.gordan.helloffmpeg.view.AutoFitTextureView;
 import com.gordan.helloffmpeg.view.CustomHorizontalProgress;
 
@@ -62,6 +67,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -69,7 +76,8 @@ import butterknife.Bind;
 import butterknife.OnClick;
 
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-public class CameraActivity extends BaseActivity {
+public class CameraActivity extends BaseActivity implements MusicAdapter.ItemClickInterface
+{
     final static String TAG = CameraActivity.class.getSimpleName();
 
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
@@ -105,6 +113,8 @@ public class CameraActivity extends BaseActivity {
     @Bind(R.id.pb_video)
     CustomHorizontalProgress mProgressBarVideo;
 
+    int mProgress=0;
+
     CameraCaptureSession mCaptureSession;
 
     ImageReader mImageReader;
@@ -123,6 +133,8 @@ public class CameraActivity extends BaseActivity {
 
     String cameraId = CameraCharacteristics.LENS_FACING_FRONT + "";
 
+    ExecutorService mExecutorService;
+
     //信号量 相当于同步代码块（锁）
     private Semaphore mCameraLock = new Semaphore(1);
 
@@ -130,8 +142,19 @@ public class CameraActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindowManager().getDefaultDisplay().getMetrics(mDisplayMetrics);
-
         sdcardFile = Environment.getExternalStorageDirectory();
+
+        mExecutorService=Executors.newFixedThreadPool(2);
+
+        mExecutorService.execute(new Runnable() {
+            @Override
+            public void run() {
+
+                FileUtil.copyFileFromAssets(CameraActivity.this,"music",sdcardFile.getAbsolutePath());
+
+            }
+        });
+
     }
 
     @Override
@@ -146,13 +169,22 @@ public class CameraActivity extends BaseActivity {
 
             case Constant.MSG_VIDEO_PROGRESS:
 
-                if(mProgressBarVideo.getProgress()>=100)
+                Log.i(TAG,"======mProgress======"+mProgress);
+                if(mProgress>=Constant.VIDEO_TAKE_MAX_TIME)
                 {
                     mHandler.removeMessages(Constant.MSG_VIDEO_PROGRESS);
+
+                    stopRecordingVideo();
+
                     break;
                 }
-
-                mProgressBarVideo.setProgress(mProgressBarVideo.getProgress()+1);
+                //刘琦遇到过同样的问题 直接连续除的话 per 为 0
+                mProgress+=1000;
+                double per=(double)mProgress/Constant.VIDEO_TAKE_MAX_TIME;
+                Log.i(TAG,"======per======"+per);
+                int value=(int)(per*100);
+                Log.i(TAG,"======value======"+value);
+                mProgressBarVideo.setProgress(value);
                 mHandler.sendEmptyMessageDelayed(Constant.MSG_VIDEO_PROGRESS,1000);
 
                 break;
@@ -166,9 +198,25 @@ public class CameraActivity extends BaseActivity {
 
             case Constant.MSG_TAKE_VIDEO:
 
-                stopRecordingVideo();
+
 
                 break;
+
+                case Constant.MSG_VIDEO_MUSIC_FINISH:
+
+                    if(mProgressDialog!=null)
+                    {
+                        mProgressDialog.dismiss();
+                        mProgressDialog=null;
+                    }
+
+                    String url=sdcardFile.getAbsolutePath()+File.separator+"output.mp4";
+
+                    Intent intent=new Intent(this,PlayerActivity.class);
+                    intent.putExtra("url",url);
+                    this.startActivity(intent);
+
+                    break;
         }
 
     }
@@ -253,7 +301,6 @@ public class CameraActivity extends BaseActivity {
             File imageFile = new File(sdcardFile.getAbsolutePath(), "gordan.jpg");
 
             mWorkHandler.post(new ImageSaver(reader.acquireNextImage(), imageFile));
-
         }
     };
 
@@ -330,7 +377,6 @@ public class CameraActivity extends BaseActivity {
         }
 
     }
-
 
     private void openCamera(int width, int height) {
 
@@ -453,7 +499,6 @@ public class CameraActivity extends BaseActivity {
         }
     }
 
-
     private void setUpMediaRecorder() {
         try {
 
@@ -496,8 +541,13 @@ public class CameraActivity extends BaseActivity {
     boolean mIsRecordingVideo;
 
     private void stopRecordingVideo() {
+
+        //选择要合成的音乐
+        initPopWindows();
+
         // UI
         mIsRecordingVideo = false;
+        mProgress=0;
         mProgressBarVideo.setProgress(0);
         mHandler.removeMessages(Constant.MSG_VIDEO_PROGRESS);
         // Stop recording
@@ -505,7 +555,6 @@ public class CameraActivity extends BaseActivity {
         mMediaRecorder.reset();
         //摄像的铃声找不到--
         shootSound("file:///system/media/audio/ui/camera_click.ogg");
-        showText("拍摄完成！");
         //再次开启预览
         startPreview();
     }
@@ -569,9 +618,6 @@ public class CameraActivity extends BaseActivity {
                     super.onCaptureCompleted(session, request, result);
                     Log.i(TAG, "====2======onCaptureCompleted()");
                     shootSound("file:///system/media/audio/ui/camera_click.ogg");
-
-                    showText("拍照完成！");
-
                     //再次开启预览
                     startPreview();
                 }
@@ -601,10 +647,7 @@ public class CameraActivity extends BaseActivity {
         switch (view.getId()) {
             case R.id.iv_switch:
 
-
-                initPopWindows();
-
-                /*if ("0".equalsIgnoreCase(cameraId)) {
+                if ("0".equalsIgnoreCase(cameraId)) {
                     cameraId = CameraCharacteristics.LENS_FACING_BACK + "";
                 } else {
                     cameraId = CameraCharacteristics.LENS_FACING_FRONT + "";
@@ -612,7 +655,7 @@ public class CameraActivity extends BaseActivity {
 
                 closeCamera();
 
-                openCamera(mTextureView.getWidth(), mTextureView.getHeight());*/
+                openCamera(mTextureView.getWidth(), mTextureView.getHeight());
 
                 break;
 
@@ -625,27 +668,27 @@ public class CameraActivity extends BaseActivity {
             case R.id.iv_video:
 
                 if (mIsRecordingVideo) {
-                    if (mHandler.hasMessages(Constant.MSG_TAKE_VIDEO)) {
-                        mHandler.removeMessages(Constant.MSG_TAKE_VIDEO);
+                    if (mHandler.hasMessages(Constant.MSG_VIDEO_PROGRESS)) {
+                        mHandler.removeMessages(Constant.MSG_VIDEO_PROGRESS);
                     }
                     stopRecordingVideo();
                 } else {
-                    showText("拍摄中，再按一次完成拍摄！");
+                    showText("再按一次完成拍摄！");
+                    mProgress=0;
                     mHandler.sendEmptyMessage(Constant.MSG_VIDEO_PROGRESS);
                     startVideoRecording();
-                    mHandler.sendEmptyMessageDelayed(Constant.MSG_TAKE_VIDEO, Constant.VIDEO_TAKE_MAX_TIME);
                 }
                 break;
         }
     }
 
+    List<MusicModel> mList=null;
+
     PopupWindow mMusicPopupWindow;
 
     private void initPopWindows()
     {
-
-        List<MusicModel> mList=new ArrayList<>();
-
+        mList=new ArrayList<>();
         try {
             String[] fileNames=this.getAssets().list("music");
 
@@ -673,6 +716,7 @@ public class CameraActivity extends BaseActivity {
         musicRecycleView.setLayoutManager(new LinearLayoutManager(this));
 
         mMusicAdapter=new MusicAdapter(this,mList,R.layout.item_music);
+        mMusicAdapter.setItemClickListener(this);
         musicRecycleView.setAdapter(mMusicAdapter);
 
         int width=mDisplayMetrics.widthPixels*4/5;
@@ -682,17 +726,23 @@ public class CameraActivity extends BaseActivity {
         mMusicPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         mMusicPopupWindow.setFocusable(true);
         mMusicPopupWindow.setOutsideTouchable(true);
-
         mMusicPopupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
             @Override
             public void onDismiss() {
+
+                //如果没有选择音乐 则直接播放界面
+                if(!mHandler.hasMessages(Constant.MSG_VIDEO_MUSIC_FINISH))
+                {
+                    //mHandler.sendEmptyMessage(Constant.MSG_VIDEO_MUSIC_FINISH);
+                }
+
+                releasePlayer();
 
                 mMusicPopupWindow=null;
             }
         });
 
         mMusicPopupWindow.showAtLocation(mTextureView,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,0,0);
-
     }
 
     private void closeCamera() {
@@ -724,6 +774,179 @@ public class CameraActivity extends BaseActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private void configureTransform(int viewWidth, int viewHeight) {
+
+        if (null == mTextureView || null == mPreviewSize) {
+            return;
+        }
+        int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
+        Matrix matrix = new Matrix();
+        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
+        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                    (float) viewHeight / mPreviewSize.getHeight(),
+                    (float) viewWidth / mPreviewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        }
+        mTextureView.setTransform(matrix);
+    }
+
+
+
+    @Override
+    public void onItemClick(View item, int position) {
+        Log.i(TAG,"=====onItemClick======"+position);
+        if(position<mList.size())
+        {
+            MusicModel model=mList.get(position);
+            String url=sdcardFile.getAbsolutePath()+File.separator+model.name;
+            Log.i(TAG,"======url====="+url);
+
+            shootSound(url);
+        }
+    }
+
+    MaterialDialog mProgressDialog;
+
+    @Override
+    public void onItemUseClick(View item, int position) {
+        Log.i(TAG,"=====onItemUseClick======"+position);
+        if(position<mList.size())
+        {
+            MusicModel model=mList.get(position);
+            String url=sdcardFile.getAbsolutePath()+File.separator+model.name;
+            Log.i(TAG,"======url====="+url);
+
+            //提前发送 （用户可能不选择铃声）
+            //mHandler.sendEmptyMessageDelayed(Constant.MSG_VIDEO_MUSIC_FINISH,30000);
+
+            mMusicPopupWindow.dismiss();
+
+            //第一个参数为true 圆形进度条 否则为水平
+            //如何检测消失？
+            MaterialDialog.Builder mBuilder=new MaterialDialog.Builder(this);
+            mProgressDialog=mBuilder.content("视频生成中,请稍后...").progress(true,100,true)
+                    .progressNumberFormat("%1d/%2d").canceledOnTouchOutside(false).build();
+            mProgressDialog.show();
+
+            String jniStr="ffmpeg -i "+sdcardFile.getAbsolutePath()+File.separator+"gordan.mp4 -i "+
+                    url+" -c:v copy -c:a mp3 -acodec libmp3lame -strict experimental -map 0:v:0 -map 1:a:0 "+
+                    sdcardFile.getAbsolutePath()+File.separator+"output.mp4";
+            Log.i(TAG,"======jniStr====="+jniStr);
+            //开始合成音乐与视频
+            executeConvertCommand(jniStr);
+        }
+    }
+
+    FfmpegUtil mFfmpegUtil;
+
+    private synchronized void executeConvertCommand(String command)
+    {
+        if(mFfmpegUtil==null)
+        {
+            mFfmpegUtil=new FfmpegUtil();
+        }
+
+        mExecutorService.execute(new Runnable() {
+
+            @Override
+            public void run()
+            {
+                Log.i(TAG,"=====ready======");
+                String[] cmd=command.split(" ");
+                int result= mFfmpegUtil.convertVideoFormat(cmd);
+                Log.i(TAG,"=====result======"+result);
+                mHandler.sendEmptyMessage(Constant.MSG_VIDEO_MUSIC_FINISH);
+            }
+        });
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.i(TAG, "=====onPause()======");
+    }
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.i(TAG, "=====onStop()======");
+        stopBackgroundThread();
+        closeCamera();
+    }
+
+
+    private void releasePlayer()
+    {
+        if(mMediaPlayer!=null)
+        {
+            if(mMediaPlayer.isPlaying())
+            {
+                mMediaPlayer.stop();
+            }
+            mMediaPlayer.release();
+            mMediaPlayer=null;
+        }
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        Log.i(TAG, "=====onDestroy()======");
+        releasePlayer();
+        super.onDestroy();
+    }
+
+    static class CompareSizesByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            // We cast here to ensure the multiplications won't overflow
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
+
+    }
+
+    private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
+        // Collect the supported resolutions that are at least as big as the preview Surface
+        List<Size> bigEnough = new ArrayList<>();
+        int w = aspectRatio.getWidth();
+        int h = aspectRatio.getHeight();
+        for (Size option : choices) {
+            if (option.getHeight() == option.getWidth() * h / w &&
+                    option.getWidth() >= width && option.getHeight() >= height) {
+                bigEnough.add(option);
+            }
+        }
+
+        // Pick the smallest of those, assuming we found any
+        if (bigEnough.size() > 0) {
+            return Collections.min(bigEnough, new CompareSizesByArea());
+        } else {
+            Log.e(TAG, "Couldn't find any suitable preview size");
+            return choices[0];
+        }
+    }
+
+    private static Size chooseVideoSize(Size[] choices) {
+        for (Size size : choices) {
+            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+                return size;
+            }
+        }
+        Log.e(TAG, "Couldn't find any suitable video size");
+        return choices[choices.length - 1];
     }
 
     private static class ImageSaver implements Runnable {
@@ -772,96 +995,4 @@ public class CameraActivity extends BaseActivity {
 
     }
 
-    static class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
-
-    }
-
-
-    private void configureTransform(int viewWidth, int viewHeight) {
-
-        if (null == mTextureView || null == mPreviewSize) {
-            return;
-        }
-        int rotation = this.getWindowManager().getDefaultDisplay().getRotation();
-        Matrix matrix = new Matrix();
-        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
-        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
-        float centerX = viewRect.centerX();
-        float centerY = viewRect.centerY();
-        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
-            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-            float scale = Math.max(
-                    (float) viewHeight / mPreviewSize.getHeight(),
-                    (float) viewWidth / mPreviewSize.getWidth());
-            matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
-        }
-        mTextureView.setTransform(matrix);
-    }
-
-    private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
-        for (Size option : choices) {
-            if (option.getHeight() == option.getWidth() * h / w &&
-                    option.getWidth() >= width && option.getHeight() >= height) {
-                bigEnough.add(option);
-            }
-        }
-
-        // Pick the smallest of those, assuming we found any
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
-        } else {
-            Log.e(TAG, "Couldn't find any suitable preview size");
-            return choices[0];
-        }
-    }
-
-    private static Size chooseVideoSize(Size[] choices) {
-        for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
-                return size;
-            }
-        }
-        Log.e(TAG, "Couldn't find any suitable video size");
-        return choices[choices.length - 1];
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.i(TAG, "=====onPause()======");
-    }
-
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.i(TAG, "=====onStop()======");
-        stopBackgroundThread();
-        closeCamera();
-    }
-
-
-    @Override
-    protected void onDestroy() {
-        Log.i(TAG, "=====onDestroy()======");
-        if(mMediaPlayer!=null)
-        {
-            mMediaPlayer.stop();
-            mMediaPlayer.release();
-        }
-        super.onDestroy();
-    }
 }

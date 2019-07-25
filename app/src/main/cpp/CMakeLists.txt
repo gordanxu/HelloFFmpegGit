@@ -17,7 +17,7 @@ add_library( # Sets the name of the library.
         SHARED
 
         # Provides a relative path to your source file(s).
-        helloffmpeg.c cmdutils.c ffmpeg.c ffmpeg_filter.c ffmpeg_opt.c)
+        helloffmpeg.c cmdutils.c ffmpeg_opt.c ffmpeg_filter.c ffmpeg_hw.c ffmpeg.c)
 
 #引入的第三方SO库中的头文件
 target_include_directories(

@@ -11,9 +11,8 @@
 
 #ifdef ANDROID
 
-#include <android/log.h>
-#include <libavfilter/avfilter.h>
 #include "ffmpeg.h"
+#include <libavfilter/avfilter.h>
 
 //#define TAG "gordanxu"
 
@@ -70,13 +69,17 @@ Java_com_gordan_helloffmpeg_util_FfmpegUtil_decode(JNIEnv *env, jobject obj, jst
     //这里打印的结果和使用ffmpeg命令得到的结果是一致的
     //av_dump_format(pFormatCtx,0,"",0);
 
+
     av_register_all();
     avformat_network_init();
     pFormatCtx = avformat_alloc_context();
-
+    int err_code=-1;
+    char buf[1024];
     //获取到封装格式的上下文（注意参数需要的是二级指针，执行完下面一句 pFormatCtx 就不为空了）
-    if (avformat_open_input(&pFormatCtx, input_str, NULL, NULL) != 0) {
+    if (avformat_open_input(&pFormatCtx, input_str, NULL, NULL)!=0) {
         LOGE("Couldn't open input stream.\n");
+        av_strerror(err_code, buf, 1024);
+        LOGE("Couldn’t open file %s: %d(%s)", input_str, err_code, buf);
         return -1;
     }
     //获取视频流信息（参数需要的只是个指针）
@@ -309,7 +312,7 @@ jstring getProtocolInfo(JNIEnv *env, jobject instance) {
         sprintf(info, "%s[Out][%10s]\n", info, avio_enum_protocols((void **) p_temp, 1));
     }
 
-    //LOGE("%s", info);
+    LOGE("%s", info);
     return (*env)->NewStringUTF(env, info);
 }
 
@@ -330,7 +333,7 @@ jstring getAVFormatInfo(JNIEnv *env, jobject instance) {
         sprintf(info, "%s[Out][%10s]\n", info, of_temp->name);
         of_temp = of_temp->next;
     }
-    //LOGE("%s", info);
+    LOGE("%s", info);
     return (*env)->NewStringUTF(env, info);
 }
 
@@ -363,7 +366,7 @@ jstring getAVCodecInfo(JNIEnv *env, jobject instance) {
 
         c_temp = c_temp->next;
     }
-    //LOGE("%s", info);
+    LOGE("%s", info);
 
     return (*env)->NewStringUTF(env, info);
 }
@@ -376,7 +379,7 @@ jstring getAVFilterInfo(JNIEnv *env, jobject instance) {
         sprintf(info, "%s[%10s]\n", info, f_temp->name);
         f_temp = f_temp->next;
     }
-    //LOGE("%s", info);
+    LOGE("%s", info);
     return (*env)->NewStringUTF(env, info);
 }
 
@@ -386,7 +389,7 @@ jstring getConfigInfo(JNIEnv *env, jobject instance) {
 
     sprintf(info, "%s\n", avcodec_configuration());
 
-    //LOGE("%s", info);
+    LOGE("%s", info);
     return (*env)->NewStringUTF(env, info);
 }
 
@@ -407,7 +410,6 @@ jint convertVideo(JNIEnv *env, jobject instance,jobjectArray cmdline)
         //赋值
         argv[i]=(char *)(*env)->GetStringUTFChars(env,js,0);
     }
-
     int result=main(argc,argv);
     //LOGI("convertVideo===="+result);
     LOGI("convertVideo finished====");
