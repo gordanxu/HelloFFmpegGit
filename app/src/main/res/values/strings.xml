@@ -1,14 +1,18 @@
 <resources>
     <string name="app_name">海豚视频</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-
     <string name="about">
 
-
-        这是一个音视频编辑的小工具，是本人学习多媒体/音视频模块的练手项目，应用中集成了开源的多媒体库ffmpeg,h264,aac,mp3等,可以对视频进行音视频源文件的抽取，合并
-        替换等操作，也可以添加水印，滤镜等特效，，仅供参考和学习
+        这是本人学习多媒体(图像/音频/视频)技术时练手的一款Demo项目,应用中集成了音视频处理库ffmpeg,
+        视频h264格式编码库x264,音频aac格式编码库fdk-aac,音频mp3格式编码库mp3lame以及视频播放器ijkplayer等。
+        \n
+        本应用功能包括：\n
+        为图片添加水印，用AudioRecorder录制音频并保存为pcm文件，将PCM原生音频转换为wav格式的音频，
+        将视频文件文件转换为原生的yuv文件，单独抽取视频中的音频文件和视频文件，合并音频文件和视频文件，
+        为视频添加水印，为视频添加滤镜特效，为视频文件替换背景音乐，音视频文件格式的转换，
+        拍照/摄像/视频播放等功能，本项目仅供参考和学习使用，严禁用于任何商业用途！！！
+        \n
+        \n
         \n
         应用作者：睡着的海豚
         \n

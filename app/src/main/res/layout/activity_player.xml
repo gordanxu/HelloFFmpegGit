@@ -16,31 +16,7 @@
     <!--将下面的布局嵌套到自定义的 EmptyControlVideo 中就找不到了 ButterKnife的BUG ？-->
 
 
-    <LinearLayout
-        android:id="@+id/ll_camera"
-        android:layout_width="120dp"
-        android:layout_height="50dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginTop="20dp"
-        android:clickable="true"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
 
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/icon_camera" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:text="随拍"
-            android:textColor="@android:color/white"
-            android:textSize="@dimen/text_18"
-            android:textStyle="bold" />
-
-    </LinearLayout>
 
 
 </FrameLayout>

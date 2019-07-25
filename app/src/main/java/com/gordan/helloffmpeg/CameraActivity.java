@@ -75,6 +75,18 @@ import java.util.concurrent.TimeUnit;
 import butterknife.Bind;
 import butterknife.OnClick;
 
+/********
+ * 视频拍摄时间默认是 15 秒 若中途用户主动放弃 则程序记录拍摄时间
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ * *********/
+
+
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class CameraActivity extends BaseActivity implements MusicAdapter.ItemClickInterface
 {
@@ -142,6 +154,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindowManager().getDefaultDisplay().getMetrics(mDisplayMetrics);
+        Log.i(TAG,mDisplayMetrics.widthPixels+"======mDisplayMetrics======"+mDisplayMetrics.heightPixels);
         sdcardFile = Environment.getExternalStorageDirectory();
 
         mExecutorService=Executors.newFixedThreadPool(2);
@@ -383,7 +396,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             return;
         }
-
+        Log.i(TAG,width+"======openCamera======="+height);
         try {
 
             CameraManager mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
@@ -838,7 +851,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
             mProgressDialog.show();
 
             String jniStr="ffmpeg -i "+sdcardFile.getAbsolutePath()+File.separator+"gordan.mp4 -i "+
-                    url+" -c:v copy -c:a mp3 -acodec libmp3lame -strict experimental -map 0:v:0 -map 1:a:0 "+
+                    url+" -c:v copy -c:a mp3 -acodec libmp3lame -t 15 -strict experimental -map 0:v:0 -map 1:a:0 "+
                     sdcardFile.getAbsolutePath()+File.separator+"output.mp4";
             Log.i(TAG,"======jniStr====="+jniStr);
             //开始合成音乐与视频
@@ -939,11 +952,19 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         }
     }
 
-    private static Size chooseVideoSize(Size[] choices) {
+    private Size chooseVideoSize(Size[] choices) {
         for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+
+           /* if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
+                return size;
+            }*/
+            //希望视频的输出尺寸和预览尺寸一样大 获取的尺寸宽高恰好是反的
+            if(size.getHeight() == mDisplayMetrics.widthPixels)
+            {
+                Log.i(TAG,size.getWidth()+"====chooseVideoSize====="+size.getHeight());
                 return size;
             }
+
         }
         Log.e(TAG, "Couldn't find any suitable video size");
         return choices[choices.length - 1];

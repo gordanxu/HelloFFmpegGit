@@ -23,9 +23,6 @@ public class PlayerActivity extends BaseActivity {
 
     boolean firstFlag;
 
-    @Bind(R.id.ll_camera)
-    LinearLayout llCamera;
-
     @Bind(R.id.ijk_player)
     EmptyControlVideo ijkPlayer;
 
@@ -69,21 +66,6 @@ public class PlayerActivity extends BaseActivity {
 
     @Override
     protected void handleBaseMessage(Message message) {
-
-    }
-
-    @OnClick({R.id.ll_camera})
-    public void onViewClick(View view) {
-        Log.i(TAG, "=======onViewClick======");
-        switch (view.getId()) {
-            case R.id.ll_camera:
-
-                Intent intent = new Intent(this, CameraActivity.class);
-                this.startActivity(intent);
-
-
-                break;
-        }
 
     }
 
