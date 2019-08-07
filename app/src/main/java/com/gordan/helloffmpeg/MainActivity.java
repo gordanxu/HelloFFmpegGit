@@ -1,20 +1,24 @@
 package com.gordan.helloffmpeg;
 
-
 import android.content.Intent;
 import android.os.Environment;
 import android.os.Message;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
+import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.FfmpegUtil;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import butterknife.Bind;
 import butterknife.OnClick;
 
 
@@ -22,8 +26,10 @@ import butterknife.OnClick;
  * 存在的问题：
  * 1 ffmpeg的库只有arm-v7a的 其它平台的就不行
  *
+ * cat /proc/cpuinfo 指令就能查看手机的CPU架构信息
+ * CPU architecture属性就是 7 表示armeabi-v7a ; 8 表示arm64-v8
  *
- *
+ *  CPU architecture: 8
  *
  *
  * ****/
@@ -34,7 +40,10 @@ public class MainActivity extends BaseActivity {
 
     FfmpegUtil mFfmpegUtil;
 
-    File sdcard=null;
+    @Bind(R.id.et_command)
+    EditText etCommand;
+
+    File sdcard = null;
 
     ExecutorService mExecutorService;
 
@@ -46,25 +55,39 @@ public class MainActivity extends BaseActivity {
     @Override
     protected void handleBaseMessage(Message message) {
 
+        switch (message.what) {
+            case Constant
+                    .MSG_COMMAND_EXECUTE_FINISHED:
+
+                if (mProgressDialog != null) {
+                    mProgressDialog.dismiss();
+                    mProgressDialog = null;
+                }
+
+                showText("命令执行成功！");
+                break;
+        }
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mExecutorService=Executors.newFixedThreadPool(1);
-        sdcard= Environment.getExternalStorageDirectory();
+        mExecutorService = Executors.newFixedThreadPool(1);
+        sdcard = Environment.getExternalStorageDirectory();
         mFfmpegUtil = new FfmpegUtil();
     }
 
+    MaterialDialog mProgressDialog;
+
     String jniStr = "";
 
-    String msg="";
-
     @OnClick({R.id.btn_cpu, R.id.btn_protocol, R.id.btn_codec, R.id.btn_filter, R.id.btn_format,
-            R.id.button, R.id.btn_configure,R.id.btn_gl,R.id.btn_other})
+            R.id.btn_configure, R.id.tv_command_finish})
     public void onViewClick(View view) {
         switch (view.getId()) {
             case R.id.btn_cpu:
+
                 jniStr = mFfmpegUtil.cpuInfo();
                 showText(jniStr);
 
@@ -73,110 +96,74 @@ public class MainActivity extends BaseActivity {
             case R.id.btn_codec:
 
                 jniStr = mFfmpegUtil.avcodecinfo();
-                //showToast(jniStr);
                 Intent intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content",jniStr);
+                intent.putExtra("content", jniStr);
                 this.startActivity(intent);
                 break;
 
             case R.id.btn_format:
                 jniStr = mFfmpegUtil.avformatinfo();
-                //showToast(jniStr);
-
                 intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content",jniStr);
+                intent.putExtra("content", jniStr);
                 this.startActivity(intent);
                 break;
 
             case R.id.btn_protocol:
                 jniStr = mFfmpegUtil.urlprotocolinfo();
-                //showToast(jniStr);
                 intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content",jniStr);
+                intent.putExtra("content", jniStr);
                 this.startActivity(intent);
                 break;
 
             case R.id.btn_filter:
                 jniStr = mFfmpegUtil.avfilterinfo();
-                //showToast(jniStr);
                 intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content",jniStr);
+                intent.putExtra("content", jniStr);
                 this.startActivity(intent);
                 break;
 
             case R.id.btn_configure:
+
                 jniStr = mFfmpegUtil.configurationinfo();
-
-                showText(jniStr);
-                break;
-
-            case R.id.button:
-
-                intent = new Intent(this, DecodeActivity.class);
+                intent = new Intent(this, InfoActivity.class);
+                intent.putExtra("content", jniStr);
                 this.startActivity(intent);
                 break;
 
 
-            case R.id.btn_gl:
+            case R.id.tv_command_finish:
 
-                intent = new Intent(this, OpenGLActivity.class);
-                this.startActivity(intent);
-                break;
+                //jniStr="ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"gordan.mp4 -i "+sdcard.getAbsolutePath()+File.separator+"moive.mp3 -c:v copy -c:a mp3 -acodec libmp3lame -strict experimental -map 0:v:0 -map 1:a:0 "+sdcard.getAbsolutePath()+File.separator+"output.mp4";
 
-            case R.id.btn_other:
+                jniStr = etCommand.getText() + "";
 
-                /*String url=sdcard.getAbsolutePath()+File.separator+"gordan.mp4";
+                if (TextUtils.isEmpty(jniStr)) {
+                    showText("执行的命令不能为空！");
+                    break;
+                }
 
-                intent = new Intent(this,PlayerActivity.class);
-                intent.putExtra("url",url);
-                this.startActivity(intent);*/
-
-                /*jniStr="ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"gordan.mp4 -i " +sdcard.getAbsolutePath()+File.separator+
-                        "moive.mp3 -c:v copy -c:a mp3 -strict experimental -map 0:v:0 -map 1:a:0 " +
-                        sdcard.getAbsolutePath()+File.separator+"output.mp4";*/
-
-                //jniStr="ffmpeg -y -i "+sdcard.getAbsolutePath()+File.separator+"trip.mp3 -vn -acodec copy -ss 00:00:00 -t 00:01:32 "+sdcard.getAbsolutePath()+File.separator+"190725.mp3";
-
-                //jniStr="ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"different.mp3 -acodec libmp3lame -q:a 8 "+sdcard.getAbsolutePath()+File.separator+"0725.mp3";
-
-                //jniStr="ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"song.wav -acodec libmp3lame "+sdcard.getAbsolutePath()+File.separator+"output.mp3";
-
-                //jniStr="./ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"gordan.mp4 -i "+sdcard.getAbsolutePath()+File.separator+"01.m4a -c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0 "+sdcard.getAbsolutePath()+File.separator+"output.mp4";
-
-                jniStr="ffmpeg -i "+sdcard.getAbsolutePath()+File.separator+"gordan.mp4 -i "+sdcard.getAbsolutePath()+File.separator+"moive.mp3 -c:v copy -c:a mp3 -acodec libmp3lame -strict experimental -map 0:v:0 -map 1:a:0 "+sdcard.getAbsolutePath()+File.separator+"output.mp4";
-
-                Log.i(TAG,"=====jniStr====="+jniStr);
+                Log.i(TAG, "=====jniStr=====" + jniStr);
+                MaterialDialog.Builder mBuilder = new MaterialDialog.Builder(this);
+                mProgressDialog = mBuilder.content("命令执行中,请稍后...").progress(true, 100, true)
+                        .progressNumberFormat("%1d/%2d").canceledOnTouchOutside(false).build();
+                mProgressDialog.show();
 
                 mExecutorService.execute(new Runnable() {
                     @Override
                     public void run() {
-                        String[] cmd=jniStr.split(" ");
-                        try {
-                            int result=mFfmpegUtil.convertVideoFormat(cmd);
-                            Log.i(TAG,"=====result====="+result);
-                            msg="convert success!!!";
-                        }
-                        catch (Exception e)
-                        {
-                            e.printStackTrace();
-                            msg=e.getMessage();
-                        }
 
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
+                        //ffmpeg -i /sdcard/gordan.mp4 -vf \"movie=/home/xpzhi/test/apple.jpg,scale=600:439[watermask];[in][watermask] overlay=10:10 [out]\" /sdcard/0726.mp4
+                        String[] cmd = jniStr.split(" ");
+                        int result = mFfmpegUtil.convertVideoFormat(cmd);
+                        Log.i(TAG, "=====result=====" + result);
+                        mHandler.sendEmptyMessage(Constant.MSG_COMMAND_EXECUTE_FINISHED);
 
-                                showText(msg);
-                            }
-                        });
                     }
                 });
                 break;
         }
 
     }
-
-
 
 
 }

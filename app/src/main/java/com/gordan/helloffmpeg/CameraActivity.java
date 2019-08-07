@@ -712,6 +712,12 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
                 MusicModel model=new MusicModel();
                 model.id=i;
                 model.name=fileName;
+                if(fileName.endsWith("png"))
+                {
+                    Log.i(TAG,"====picture file so continue==");
+                    continue;
+                }
+
                 mList.add(model);
                 i++;
             }

@@ -14,6 +14,10 @@ public class Constant {
 
     public static final int MSG_VIDEO_MUSIC_FINISH=10012;
 
+    public static final int MSG_COMMAND_EXECUTE_FINISHED=10013;
 
 
+    public static final int FLAG_SCAN_VIDEO_REQUEST_CODE=20000;
+
+    public static final int FLAG_SCAN_VIDEO_RESULT_CODE=20001;
 }
