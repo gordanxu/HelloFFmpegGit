@@ -8,9 +8,12 @@ import android.view.View;
 import com.gordan.baselibrary.fragment.BaseFragment;
 import com.gordan.helloffmpeg.CameraActivity;
 import com.gordan.helloffmpeg.DecodeActivity;
+import com.gordan.helloffmpeg.FilterActivity;
 import com.gordan.helloffmpeg.MainActivity;
 import com.gordan.helloffmpeg.MarkActivity;
 import com.gordan.helloffmpeg.R;
+
+import java.util.logging.Filter;
 
 import butterknife.OnClick;
 
@@ -40,13 +43,20 @@ public class VideoFragment extends BaseFragment {
 
     }
 
-    @OnClick({R.id.ll_module_video,R.id.ll_module_mark, R.id.ll_module_v_yuv, R.id.ll_module_tools})
+    @OnClick({R.id.ll_module_video, R.id.ll_module_mark, R.id.ll_module_v_yuv, R.id.ll_module_tools, R.id.ll_module_filter})
     public void onViewClick(View view) {
         switch (view.getId()) {
 
+
+            case R.id.ll_module_filter:
+
+                Intent intent = new Intent(mActivity, FilterActivity.class);
+                startActivity(intent);
+                break;
+
             case R.id.ll_module_video:
 
-                Intent intent = new Intent(mActivity, CameraActivity.class);
+                intent = new Intent(mActivity, CameraActivity.class);
                 startActivity(intent);
                 break;
 

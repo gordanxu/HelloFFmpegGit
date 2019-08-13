@@ -105,11 +105,8 @@
             android:background="@color/line" />
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
+            android:id="@+id/ll_module_filter"
+            style="@style/module_style">
 
             <ImageView
                 android:layout_width="wrap_content"

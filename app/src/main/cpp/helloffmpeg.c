@@ -13,6 +13,7 @@
 
 #include "ffmpeg.h"
 #include <libavfilter/avfilter.h>
+#include <libavcodec/jni.h>
 
 //#define TAG "gordanxu"
 
@@ -69,7 +70,6 @@ Java_com_gordan_helloffmpeg_util_FfmpegUtil_decode(JNIEnv *env, jobject obj, jst
     //这里打印的结果和使用ffmpeg命令得到的结果是一致的
     //av_dump_format(pFormatCtx,0,"",0);
 
-
     av_register_all();
     avformat_network_init();
     pFormatCtx = avformat_alloc_context();
@@ -110,7 +110,9 @@ Java_com_gordan_helloffmpeg_util_FfmpegUtil_decode(JNIEnv *env, jobject obj, jst
     }
     avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoindex]->codecpar);
 
-    //获取到解码器
+
+    //获取到解码器(对于视频格式为h264的 先硬解 再软解)，所有视频格式都会优先使用硬解码??? 可是后面报错？
+    //pCodec=avcodec_find_decoder_by_name("h264_mediacodec");
     pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
     if (pCodec == NULL) {
         LOGE("Couldn't find Codec.\n");
@@ -446,6 +448,8 @@ int JNI_OnLoad(JavaVM *jvm, void *reserved) {
     (*env)->RegisterNatives(env, clazz, method, sizeof(method) / sizeof(JNINativeMethod));
 
     LOGI("======JNI_OnLoad finished=======");
+    //ffmpeg使用硬解码的设置（需要获取JAVA 虚拟机）
+    av_jni_set_java_vm(jvm, reserved);
 
     return JNI_VERSION_1_6;
 }

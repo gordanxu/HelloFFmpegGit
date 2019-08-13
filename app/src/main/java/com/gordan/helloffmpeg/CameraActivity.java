@@ -483,6 +483,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
             mSurfaces.add(mSurface);
             mPreviewBuilder.addTarget(mSurface);
 
+            //将录制到的声音和图像关联到一起了 变成了视频
             Surface videoSurface = mMediaRecorder.getSurface();
             mSurfaces.add(videoSurface);
             mPreviewBuilder.addTarget(videoSurface);

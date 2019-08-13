@@ -49,7 +49,7 @@ public class HomeActivity extends BaseActivity implements ViewPager.OnPageChange
     List<Fragment> mFragmentList;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,

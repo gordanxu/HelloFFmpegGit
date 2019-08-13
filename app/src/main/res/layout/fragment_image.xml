@@ -60,15 +60,84 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-           <!-- <ImageView
+            <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/module_tools" />
+                android:src="@drawable/module_fuzzy" />
 
             <TextView
                 style="@style/module_text"
-                android:text="音视频工具" />
+                android:text="高斯模糊" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp" android:background="@color/line" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:orientation="horizontal">
+
+
+        <LinearLayout
+            android:id="@+id/ll_module_gif"
+            style="@style/module_style">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/module_gif" />
+
+            <TextView
+                style="@style/module_text"
+                android:text="GIF图片加载" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/line" />
+
+        <LinearLayout
+            style="@style/module_style" >
+
+           <!-- <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/module_play" />
+
+            <TextView
+                style="@style/module_text"
+                android:text="视频播放" />
 -->
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/line" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+         <!--   <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/module_fuzzy" />
+
+            <TextView
+                style="@style/module_text"
+                android:text="高斯模糊" />-->
+
         </LinearLayout>
     </LinearLayout>
 
