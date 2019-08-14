@@ -125,6 +125,12 @@ public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
         return cameraId;
     }
 
+
+    public void takePicture(Camera.PictureCallback callback)
+    {
+        mCamera.takePicture(callback);
+    }
+
     public void startRecord() {
         queueEvent(new Runnable() {
             @Override

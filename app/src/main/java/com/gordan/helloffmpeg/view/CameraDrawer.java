@@ -9,6 +9,7 @@ import android.util.Log;
 
 import com.gordan.helloffmpeg.filter.AFilter;
 import com.gordan.helloffmpeg.filter.CameraFilter;
+import com.gordan.helloffmpeg.filter.GroupFilter;
 import com.gordan.helloffmpeg.filter.NoFilter;
 import com.gordan.helloffmpeg.filter.SlideGpuFilterGroup;
 import com.gordan.helloffmpeg.util.EasyGlUtils;
@@ -32,7 +33,9 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
     private final AFilter showFilter;
     private final AFilter drawFilter;
 
-    //private SlideGpuFilterGroup mSlideFilterGroup;
+    private final GroupFilter mAfFilter;
+
+    private SlideGpuFilterGroup mSlideFilterGroup;
 
     private SurfaceTexture mSurfaceTextrue;
     /**预览数据的宽高*/
@@ -57,7 +60,6 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
 
     private float[] SM = new float[16];     //用于显示的变换矩阵
 
-
     private int filterIndex=-1;
 
 
@@ -65,8 +67,8 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
         //初始化一个滤镜 也可以叫控制器
         showFilter = new NoFilter(resources);
         drawFilter = new CameraFilter(resources);
-
-        //mSlideFilterGroup=new SlideGpuFilterGroup();
+        mAfFilter = new GroupFilter(resources);
+        mSlideFilterGroup=new SlideGpuFilterGroup();
 
         //必须传入上下翻转的矩阵
         OM= MatrixUtils.getOriginalMatrix();
@@ -82,7 +84,7 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
         mSurfaceTextrue = new SurfaceTexture(textureID);
 
         showFilter.create();
-        showFilter.setTextureId(textureID);
+        //showFilter.setTextureId(textureID);
 
         drawFilter.create();
         drawFilter.setTextureId(textureID);
@@ -101,7 +103,9 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
          * **/
         drawFilter.setMatrix(OM);
 
-        //mSlideFilterGroup.init();
+        mAfFilter.create();
+
+        mSlideFilterGroup.init();
 
         if (recordingEnabled){
             recordingStatus = RECORDING_RESUMED;
@@ -132,11 +136,13 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
                 0,  GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null);
         useTexParameter();
         //自己的手机添加上该代码则预览不出来
-        //GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,0);
 
         Log.i(TAG,mPreviewWidth+"=====onSurfaceChanged()====="+mPreviewHeight);
+        mAfFilter.setSize(mPreviewWidth,mPreviewHeight);
         drawFilter.setSize(mPreviewWidth,mPreviewHeight);
-        //mSlideFilterGroup.onSizeChanged(mPreviewWidth,mPreviewHeight);
+        /*** 添加黑屏 ***/
+        mSlideFilterGroup.onSizeChanged(mPreviewWidth,mPreviewHeight);
 
         MatrixUtils.getShowMatrix(SM,mPreviewWidth, mPreviewHeight, width, height);
         showFilter.setMatrix(SM);
@@ -163,18 +169,29 @@ public class CameraDrawer implements GLSurfaceView.Renderer {
         drawFilter.draw();
         EasyGlUtils.unBindFrameBuffer();
 
-        //mSlideFilterGroup.onDrawFrame(fTexture[0],filterIndex);
+        if(filterIndex>=0)
+        {
+            mSlideFilterGroup.onDrawFrame(fTexture[0],filterIndex);
+            mAfFilter.setTextureId(mSlideFilterGroup.getOutputTexture());
+        }
+        else
+        {
+            mAfFilter.setTextureId(fTexture[0]);
+        }
+
+        mAfFilter.draw();
 
         /**绘制显示的filter*/
 
         GLES20.glViewport(0,0,width,height);
-        //showFilter.setTextureId(mAfFilter.getOutputTexture());
+        showFilter.setTextureId(mAfFilter.getOutputTexture());
         showFilter.draw();
 
         /*if (videoEncoder != null && recordingEnabled && recordingStatus == RECORDING_ON){
             videoEncoder.setTextureId(mAfFilter.getOutputTexture());
             videoEncoder.frameAvailable(mSurfaceTextrue);
         }*/
+
     }
 
 

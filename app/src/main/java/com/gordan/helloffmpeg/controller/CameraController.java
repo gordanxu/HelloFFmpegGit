@@ -96,6 +96,16 @@ public class CameraController implements ICamera{
         }
     }
 
+    public void takePicture(Camera.PictureCallback callback)
+    {
+        if(mCamera!=null)
+        {
+            mCamera.takePicture(null,null,callback);
+        }
+
+
+    }
+
     @Override
     public Point getPreviewSize() {
         return mPreSize;
