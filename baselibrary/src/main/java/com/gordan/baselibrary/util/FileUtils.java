@@ -1,9 +1,5 @@
 package com.gordan.baselibrary.util;
 
-
-
-
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -11,20 +7,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 
-
-
-/**
- * @author zhangpeng
- * @parm 功能：文件操作辅助类
- * @date 创建时间：2017-11-09
- * @parm 修订记录：
- */
-
 public class FileUtils {
 
 
     final static String CHANNEL_INFO_NAME = "channel.txt";
-
 
 
     public static void saveChannelInfoToFile(String content, String path) throws IOException {

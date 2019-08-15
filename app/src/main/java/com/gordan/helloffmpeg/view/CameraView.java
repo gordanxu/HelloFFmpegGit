@@ -13,15 +13,13 @@ import com.gordan.helloffmpeg.controller.CameraController;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-/**
- * Created by cj on 2017/8/1.
- * desc
- */
 
-public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
 
+public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
+        SurfaceTexture.OnFrameAvailableListener {
 
     private CameraDrawer mCameraDrawer;
+
     private CameraController mCamera;
 
     private int dataWidth = 0, dataHeight = 0;
@@ -129,46 +127,6 @@ public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
     public void takePicture(Camera.PictureCallback callback)
     {
         mCamera.takePicture(callback);
-    }
-
-    public void startRecord() {
-        queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                mCameraDrawer.startRecord();
-            }
-        });
-    }
-
-    public void stopRecord() {
-        queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                mCameraDrawer.stopRecord();
-            }
-        });
-    }
-
-    public void setSavePath(String path) {
-        mCameraDrawer.setSavePath(path);
-    }
-
-    public void resume(final boolean auto) {
-        queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                mCameraDrawer.onResume(auto);
-            }
-        });
-    }
-
-    public void pause(final boolean auto) {
-        queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                mCameraDrawer.onPause(auto);
-            }
-        });
     }
 
     public void onTouch(final MotionEvent event) {

@@ -14,21 +14,24 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
 
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 
-/**
- * Created by zhy on 15/11/6.
- */
+
 public class ImageUtils
 {
+    final static String TAG=ImageUtils.class.getSimpleName();
     /**
      * 水平方向模糊度
      */
@@ -644,5 +647,51 @@ public class ImageUtils
         return rotaBitmap;
     }
 
+
+    public static boolean saveBitmap2File(Bitmap b, File file) {
+
+        Log.i(TAG,"=====saveBitmap2File====");
+        FileOutputStream fos=null;
+        BufferedOutputStream bos=null;
+
+        try {
+            fos = new FileOutputStream(file);
+            bos = new BufferedOutputStream(fos);
+            b.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+            bos.flush();
+            bos.close();
+            fos.close();
+            Log.i(TAG,"=====saveBitmap2File success====");
+            return true;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Log.i(TAG,"=====saveBitmap2File failed====");
+        return false;
+    }
+
+    public static boolean saveImageByte2File(byte[] image, File file) {
+        Log.i(TAG,"=====saveImageByte2File ====");
+        FileOutputStream output = null;
+        try {
+            output = new FileOutputStream(file);
+            output.write(image);
+            Log.i(TAG,"=====saveImageByte2File success====");
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != output) {
+                try {
+                    output.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        Log.i(TAG,"=====saveImageByte2File success====");
+        return false;
+    }
 
 }

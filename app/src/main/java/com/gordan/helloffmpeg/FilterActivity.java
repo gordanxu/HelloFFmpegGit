@@ -21,14 +21,10 @@ import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.view.CameraView;
 import com.gordan.helloffmpeg.controller.SensorControler;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 import butterknife.Bind;
 import butterknife.OnClick;
-
 
 
 /****
@@ -37,7 +33,7 @@ import butterknife.OnClick;
  *
  * ***/
 public class FilterActivity extends BaseActivity implements View.OnTouchListener,
-        SensorControler.CameraFocusListener {
+        SensorControler.CameraFocusListener, Camera.PictureCallback {
 
     final static String TAG = FilterActivity.class.getSimpleName();
 
@@ -80,6 +76,7 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     @Override
     protected void onResume() {
         super.onResume();
+        Log.i(TAG,"=====onResume()=====");
         mCameraView.onResume();
     }
 
@@ -88,46 +85,7 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
         switch (view.getId()) {
             case R.id.iv_photo:
 
-                mCameraView.takePicture(new Camera.PictureCallback() {
-
-                    @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
-
-                        Log.i(TAG, "====take picture callback====");
-
-                        try {
-
-                            File imageFile = new File(sdcardFile, "gordan_0814.jpg");
-                            if (!imageFile.exists()) {
-
-                                if (!imageFile.createNewFile()) {
-                                    Log.i(TAG, "====create file failed so return====");
-                                    return;
-                                }
-                            }
-
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-
-                                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-
-                                    Bitmap normalBitmap = ImageUtils.getRotateBitmap(bitmap, 90.0f);
-
-                                    saveBitmap(normalBitmap, imageFile);
-
-                                    mHandler.sendEmptyMessage(Constant.MSG_TAKE_PICTURE);
-
-                                }
-                            }).start();
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-
-                    }
-                });
+                mCameraView.takePicture(this);
 
                 break;
 
@@ -153,7 +111,10 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     @Override
     public boolean onTouch(View v, MotionEvent event) {
 
+        //触摸屏幕 相机自动聚焦
+
         switch (event.getAction()) {
+
             case MotionEvent.ACTION_UP:
                 float sRawX = event.getRawX();
                 float sRawY = event.getRawY();
@@ -164,9 +125,7 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
 
                 Point point = new Point((int) rawX, (int) rawY);
                 mCameraView.onFocus(point, screenWidth, screenHeight, null);
-                // mFocus.startFocus(new Point((int) sRawX, (int) sRawY));
         }
-
 
         return true;
     }
@@ -177,6 +136,40 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
         Point point = new Point(screenWidth / 2, screenHeight / 2);
         mCameraView.onFocus(point, screenWidth, screenHeight, null);
 
+    }
+
+    @Override
+    public void onPictureTaken(byte[] data, Camera camera) {
+        Log.i(TAG, "====take picture callback====");
+        try {
+
+            File imageFile = new File(sdcardFile, "gordan_0814.jpg");
+            if (!imageFile.exists()) {
+
+                if (!imageFile.createNewFile()) {
+                    Log.i(TAG, "====create file failed so return====");
+                    return;
+                }
+            }
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+
+                    Bitmap normalBitmap = ImageUtils.getRotateBitmap(bitmap, 90.0f);
+
+                    ImageUtils.saveBitmap2File(normalBitmap,imageFile);
+
+                    mHandler.sendEmptyMessage(Constant.MSG_TAKE_PICTURE);
+
+                }
+            }).start();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -198,23 +191,6 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
         }
 
         super.onDestroy();
-    }
-
-    public void saveBitmap(Bitmap b, File file) {
-
-        try {
-            FileOutputStream fout = new FileOutputStream(file);
-            BufferedOutputStream bos = new BufferedOutputStream(fout);
-            b.compress(Bitmap.CompressFormat.JPEG, 100, bos);
-            bos.flush();
-            bos.close();
-            fout.close();
-            Log.i(TAG, "saveBitmap成功");
-        } catch (IOException e) {
-            Log.i(TAG, "saveBitmap:失败");
-            e.printStackTrace();
-        }
-
     }
 
     MediaPlayer mMediaPlayer = null;
@@ -246,24 +222,6 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
         }
     }
 
-    private void saveImageByte2File(byte[] image, File file) {
-        FileOutputStream output = null;
-        try {
-            output = new FileOutputStream(file);
-            output.write(image);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (null != output) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            Log.i(TAG, "=====save image success=====");
-            mHandler.sendEmptyMessage(Constant.MSG_TAKE_PICTURE);
-        }
-    }
+
 
 }
