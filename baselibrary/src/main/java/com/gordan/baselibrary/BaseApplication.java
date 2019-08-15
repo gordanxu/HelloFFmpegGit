@@ -10,6 +10,8 @@ import android.os.Environment;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import com.gordan.baselibrary.util.LogUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,6 +33,8 @@ public class BaseApplication extends Application implements Thread.UncaughtExcep
         Log.i(TAG, "====onCreate()======");
         mInstance=this;
         Thread.setDefaultUncaughtExceptionHandler(this);
+        //初始化日志打印类
+        LogUtils.init(this,true);
     }
 
     @Override

@@ -13,8 +13,6 @@ import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.DisplayMetrics;
-
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -650,7 +648,7 @@ public class ImageUtils
 
     public static boolean saveBitmap2File(Bitmap b, File file) {
 
-        Log.i(TAG,"=====saveBitmap2File====");
+        LogUtils.i(TAG,"=====saveBitmap2File====",false);
         FileOutputStream fos=null;
         BufferedOutputStream bos=null;
 
@@ -661,23 +659,23 @@ public class ImageUtils
             bos.flush();
             bos.close();
             fos.close();
-            Log.i(TAG,"=====saveBitmap2File success====");
+            LogUtils.i(TAG,"=====saveBitmap2File success====",false);
             return true;
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Log.i(TAG,"=====saveBitmap2File failed====");
+        LogUtils.i(TAG,"=====saveBitmap2File failed====",false);
         return false;
     }
 
     public static boolean saveImageByte2File(byte[] image, File file) {
-        Log.i(TAG,"=====saveImageByte2File ====");
+        LogUtils.i(TAG,"=====saveImageByte2File ====",false);
         FileOutputStream output = null;
         try {
             output = new FileOutputStream(file);
             output.write(image);
-            Log.i(TAG,"=====saveImageByte2File success====");
+            LogUtils.i(TAG,"=====saveImageByte2File success====",false);
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -690,7 +688,7 @@ public class ImageUtils
                 }
             }
         }
-        Log.i(TAG,"=====saveImageByte2File success====");
+        LogUtils.i(TAG,"=====saveImageByte2File success====",false);
         return false;
     }
 

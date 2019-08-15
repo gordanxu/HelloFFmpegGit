@@ -13,10 +13,20 @@ import java.io.InputStream;
 
 public class AssetsUtils {
 
+    final static String TAG=AssetsUtils.class.getSimpleName();
+
+    /******
+     * 从Assets目录拷贝图片
+     *
+     * @param mContext
+     * @param fileName 图片名称
+     * @return Bitmap对象
+     */
     public static Bitmap getImageFromAssets(Context mContext, String fileName) {
         Bitmap image = null;
         AssetManager am = mContext.getAssets();
         try {
+            LogUtils.i(TAG,"====getImageFromAssets======",false);
             InputStream is = am.open(fileName);
             image = BitmapFactory.decodeStream(is);
             is.close();
@@ -27,13 +37,24 @@ public class AssetsUtils {
         }
     }
 
-    public static void copyFileFromAssets(Context mContext, String assetsPath, String savePath) {
+    /*****
+     * 拷贝Assets目录指定文件到指定路径
+     *
+     * @param mContext
+     * @param assetsPath
+     * @param savePath
+     * @return
+     */
+    public static boolean copyFileFromAssets(Context mContext, String assetsPath, String savePath) {
         try {
+            LogUtils.i(TAG,"=====copyFileFromAssets=====",false);
             String filename = assetsPath.substring(assetsPath.lastIndexOf("/") + 1);
             InputStream is = mContext.getAssets().open(assetsPath);
             File destFile = new File(savePath, filename);
             if (destFile.exists()) {
-                return;
+                //这里的业务逻辑 多半是拷贝过 所以就不必再次拷贝了 所以直接返回
+                LogUtils.i(TAG,"===file exists so return====",false);
+                return false;
             }
 
             FileOutputStream fos = new FileOutputStream(destFile);
@@ -46,9 +67,13 @@ public class AssetsUtils {
             fos.flush();// 刷新缓冲区
             is.close();
             fos.close();
+            LogUtils.i(TAG,"=====copyFileFromAssets===success==",false);
         } catch (Exception e) {
             e.printStackTrace();
+            LogUtils.i(TAG,"=====copyFileFromAssets==failed===",false);
+            return false;
         }
+        return true;
     }
 
 
@@ -62,9 +87,11 @@ public class AssetsUtils {
      */
     public static void copyAssetsToSDCard(Context context, String srcPath, String dstPath) {
         try {
+            LogUtils.i(TAG,"=====copyAssetsToSDCard====",false);
             String fileNames[] = context.getAssets().list(srcPath);
             if (fileNames.length > 0) {
-                //如果式目录
+                //如果是目录
+                LogUtils.i(TAG,"=====copyDir====",false);
                 File file = new File(Environment.getExternalStorageDirectory(), dstPath);
                 if (!file.exists()) file.mkdirs();
                 for (String fileName : fileNames) {
@@ -76,6 +103,7 @@ public class AssetsUtils {
                 }
             } else {
                 //如果是文件
+                LogUtils.i(TAG,"=====copyFile====",false);
                 File outFile = new File(Environment.getExternalStorageDirectory(), dstPath);
                 InputStream is = context.getAssets().open(srcPath);
                 FileOutputStream fos = new FileOutputStream(outFile);
@@ -91,8 +119,6 @@ public class AssetsUtils {
 
         } catch (Exception e) {
             e.printStackTrace();
-
-
         }
     }
 
