@@ -1,9 +1,11 @@
 package com.gordan.baselibrary.util;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
 import android.os.Environment;
 
 import java.io.File;
@@ -118,6 +120,30 @@ public class AssetsUtils {
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 播放assets下的音频
+     *
+     * @param context 当前页面
+     * @param name    音频文件名称
+     */
+    public static void playAssetsMedia(Context context, String name) {
+        final MediaPlayer mediaPlayer = new MediaPlayer();
+        try {
+            AssetFileDescriptor afd = context.getAssets().openFd(name);
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp)
+                {
+                    mediaPlayer.start();
+                }
+            });
+            mediaPlayer.setDataSource(afd.getFileDescriptor());
+            mediaPlayer.prepareAsync();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
