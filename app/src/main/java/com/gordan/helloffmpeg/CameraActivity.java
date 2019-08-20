@@ -12,7 +12,6 @@ import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.ColorDrawable;
-import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
@@ -50,11 +49,11 @@ import android.widget.PopupWindow;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
+import com.gordan.baselibrary.util.AssetsUtils;
 import com.gordan.helloffmpeg.adapter.MusicAdapter;
 import com.gordan.helloffmpeg.model.MusicModel;
 import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.FfmpegUtil;
-import com.gordan.helloffmpeg.util.FileUtil;
 import com.gordan.helloffmpeg.view.AutoFitTextureView;
 import com.gordan.helloffmpeg.view.CustomHorizontalProgress;
 
@@ -163,7 +162,8 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
             @Override
             public void run() {
 
-                FileUtil.copyFileFromAssets(CameraActivity.this,"music",sdcardFile.getAbsolutePath());
+
+                AssetsUtils.copyFileFromAssets(CameraActivity.this,"music",sdcardFile.getAbsolutePath());
 
             }
         });

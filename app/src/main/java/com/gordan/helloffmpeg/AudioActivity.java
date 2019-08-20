@@ -59,8 +59,6 @@ public class AudioActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-
         sdcardFile = Environment.getExternalStorageDirectory();
     }
 

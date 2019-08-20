@@ -23,4 +23,6 @@ public class FfmpegUtil {
 
     public native int convertVideoFormat(String[] cmdLine);
 
+    public native void mergeVideoAndAudio(String inputVideo,String inputAudio,String outputMedia);
+
 }

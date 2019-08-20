@@ -11,6 +11,8 @@ import android.widget.EditText;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
+import com.gordan.baselibrary.util.LogUtils;
+import com.gordan.baselibrary.util.MD5Utils;
 import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.FfmpegUtil;
 
@@ -76,6 +78,9 @@ public class MainActivity extends BaseActivity {
         mExecutorService = Executors.newFixedThreadPool(1);
         sdcard = Environment.getExternalStorageDirectory();
         mFfmpegUtil = new FfmpegUtil();
+
+
+
     }
 
     MaterialDialog mProgressDialog;

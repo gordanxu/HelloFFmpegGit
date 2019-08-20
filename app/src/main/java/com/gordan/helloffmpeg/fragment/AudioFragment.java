@@ -7,6 +7,7 @@ import android.view.View;
 
 import com.gordan.baselibrary.fragment.BaseFragment;
 import com.gordan.helloffmpeg.AudioActivity;
+import com.gordan.helloffmpeg.MergeActivity;
 import com.gordan.helloffmpeg.R;
 
 import butterknife.OnClick;
@@ -37,14 +38,19 @@ public class AudioFragment extends BaseFragment {
     }
 
 
-    @OnClick({R.id.ll_module_pcm})
-    public void onViewClick(View view)
-    {
-        switch (view.getId())
-        {
+    @OnClick({R.id.ll_module_pcm, R.id.ll_module_merge})
+    public void onViewClick(View view) {
+        switch (view.getId()) {
             case R.id.ll_module_pcm:
 
-                Intent intent=new Intent(mActivity, AudioActivity.class);
+                Intent intent = new Intent(mActivity, AudioActivity.class);
+                startActivity(intent);
+
+                break;
+
+            case R.id.ll_module_merge:
+
+                intent = new Intent(mActivity, MergeActivity.class);
                 startActivity(intent);
 
                 break;
