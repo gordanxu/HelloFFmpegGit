@@ -38,6 +38,9 @@ void custom_log(void *ptr, int level, const char *fmt, va_list vl) {
 /****
  * 抽取裸视频数据（YUV格式）的过程
  *
+ *
+ * 雷神源：https://blog.csdn.net/leixiaohua1020/article/details/47010637
+ *
  * @param env
  * @param obj
  * @param input_jstr
@@ -308,6 +311,8 @@ Java_com_gordan_helloffmpeg_util_FfmpegUtil_cpuInfo(JNIEnv *env, jobject instanc
 
 /****
  * 复用的过程（独立的音频和视频文件合并为一个新的视频文件）
+ *
+ * 雷神源：https://blog.csdn.net/leixiaohua1020/article/details/39802913
  *
  * @param env
  * @param obj
@@ -592,6 +597,8 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 /****
  * 解复用的过程（音频和视频分离，前提是得知道视频和音频的编码格式）
  *
+ * 雷神源：https://blog.csdn.net/leixiaohua1020/article/details/39802819
+ *
  * @param env
  * @param obj
  * @param input_ts
@@ -831,6 +838,8 @@ void separateVideoAndAudio(JNIEnv *env, jobject obj,jstring input_ts,jstring out
 /****
  *
  * 封装格式转换
+ *
+ * 雷神源：https://blog.csdn.net/leixiaohua1020/article/details/25422685
  *
  * @param env
  * @param obj

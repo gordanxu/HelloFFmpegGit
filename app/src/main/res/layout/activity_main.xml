@@ -43,9 +43,9 @@
 
     <TextView
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="100dp"
         android:gravity="center_vertical"
-        android:text="可执行视频格式转换等命令"
+        android:text="支持视频YUV裸数据流的抽取，音视频分离，音视频合并，添加视频水印，更换视频音乐背景，视频格式转换等命令"
         android:textColor="@android:color/white"
         android:textSize="@dimen/text_16" />
 
