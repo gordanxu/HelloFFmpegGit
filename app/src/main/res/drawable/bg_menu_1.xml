@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval"
+    android:useLevel="false">
+
+    <solid android:color="@color/menu_bg_1" />
+
+    <size
+        android:width="12dp"
+        android:height="12dp" />
+
+    <!-- 这里的宽高必须要跟ImageView的Padding设置得一致 才能保证ImageView的背景是圆形 图片也必须是正方形-->
+
+
+</shape>

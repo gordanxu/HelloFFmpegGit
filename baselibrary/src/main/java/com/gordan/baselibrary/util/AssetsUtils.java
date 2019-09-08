@@ -113,6 +113,7 @@ public class AssetsUtils {
                 int byteCount;
                 while ((byteCount = is.read(buffer)) != -1) {
                     fos.write(buffer, 0, byteCount);
+                    LogUtils.i(TAG,"====write==",false);
                 }
                 fos.flush();
                 is.close();

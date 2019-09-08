@@ -35,6 +35,15 @@ void custom_log(void *ptr, int level, const char *fmt, va_list vl) {
 }
 
 
+/****
+ * 抽取裸视频数据（YUV格式）的过程
+ *
+ * @param env
+ * @param obj
+ * @param input_jstr
+ * @param output_jstr
+ * @return
+ */
 JNIEXPORT jint JNICALL
 Java_com_gordan_helloffmpeg_util_FfmpegUtil_decode(JNIEnv *env, jobject obj, jstring input_jstr,
                                                    jstring output_jstr) {
@@ -296,10 +305,20 @@ Java_com_gordan_helloffmpeg_util_FfmpegUtil_cpuInfo(JNIEnv *env, jobject instanc
     return (*env)->NewStringUTF(env, "Hello from JNI !  Compiled with ABI " ABI ".");
 }
 
+
+/****
+ * 复用的过程（独立的音频和视频文件合并为一个新的视频文件）
+ *
+ * @param env
+ * @param obj
+ * @param input_h264
+ * @param input_aac
+ * @param output_ts
+ */
 void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring input_aac,
                          jstring output_ts) {
 
-    //	AVOutputFormat* ofmt = NULL;
+    AVOutputFormat* ofmt = NULL;
 //Input AVFormatContext and Output AVFormatContext
     AVFormatContext *ifmt_ctx_v = NULL, *ifmt_ctx_a = NULL, *ofmt_ctx = NULL;
     AVPacket pkt;
@@ -360,15 +379,16 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 
     LOGE("muxing packet avformat_alloc_output_context2  mpegts");
 
-//Output 输出的TS文件
+//Output 申请输出的TS文件的上下文
 //xpzhi  因为我这里是直接写入到文件
 //参考 https://blog.csdn.net/leixiaohua1020/article/details/41198929
-    avformat_alloc_output_context2(&ofmt_ctx, NULL, "mpegts", output_str);
+    avformat_alloc_output_context2(&ofmt_ctx, NULL, NULL, output_str);
     if (!ofmt_ctx) {
         LOGE("Could not create output context");
         ret = AVERROR_UNKNOWN;
         goto readH264ACC2TS_end;
     }
+    ofmt=ofmt_ctx->oformat;
 
     LOGE(" muxing packet ifmt_ctx_v->nb_streams=%d", ifmt_ctx_v->nb_streams);
 
@@ -376,10 +396,6 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 //Create output AVStream according to input AVStream 查找视频流
         if (ifmt_ctx_v->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             AVStream *in_stream = ifmt_ctx_v->streams[i];
-            AVRational rational;
-            rational.den = 1;
-            rational.num = 15;
-            in_stream->r_frame_rate = rational;
             AVStream *out_stream = avformat_new_stream(ofmt_ctx, in_stream->codec->codec);
             videoindex_v = i;
             LOGE("=========videoindex_v:%d====",videoindex_v);
@@ -389,25 +405,16 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                 goto readH264ACC2TS_end;
             }
             videoindex_out = out_stream->index;
-            //xpzhi 设置视频的格式信息（这里的比特率通过ffmpeg获取不到）
-            AVCodecContext *c;
-            c = out_stream->codec;
-            c->pix_fmt=AV_PIX_FMT_YUV444P;
-            c->bit_rate = 384000;
-            c->width = 1920;
-            c->height = 1080;
-            c->time_base.num = 1;
-            c->time_base.den = 25;
 //Copy the settings of AVCodecContext
             if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
                 LOGE("Failed to copy context from input to output stream codec context");
                 goto readH264ACC2TS_end;
             }
             out_stream->codec->codec_tag = 0;
-            //xpzhi 这里找不到
-            /*if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
-                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-            }*/
+            //xpzhi 这里找不到 CODEC_FLAG_GLOBAL_HEADER
+            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
+                out_stream->codec->flags |= (1 << 22);
+            }
             break;
         }
     }
@@ -417,10 +424,6 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 //Create output AVStream according to input AVStream 查找音频流
         if (ifmt_ctx_a->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
             AVStream *in_stream = ifmt_ctx_a->streams[i];
-            AVRational rational;
-            rational.den = 1;
-            rational.num = 25;
-            in_stream->r_frame_rate = rational;
             AVStream *out_stream = avformat_new_stream(ofmt_ctx, in_stream->codec->codec);
             audioindex_a = i;
             LOGE("=========audioindex_a:%d====",audioindex_a);
@@ -435,25 +438,17 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                 LOGE("Failed to copy context from input to output stream codec context");
                 goto readH264ACC2TS_end;
             }
-            //xpzhi 设置音频格式
-            AVCodecContext *c;
-            c = out_stream->codec;
-            c->sample_fmt = AV_SAMPLE_FMT_S16;
-            c->bit_rate = 67000;
-            c->sample_rate = 44100;
-            c->channels = AV_CH_LAYOUT_STEREO;
-            c->time_base.num = 1;
-            c->time_base.den = 25;
             out_stream->codec->codec_tag = 0;
-            //xpzhi
-            /*if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
-                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-            }*/
+            //xpzhi CODEC_FLAG_GLOBAL_HEADER
+            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) {
+                out_stream->codec->flags |= (1 << 22);
+            }
 
             break;
         }
     }
 
+    LOGE("====v:%p===a:%p====t:%p==",&ifmt_ctx_v,&ifmt_ctx_a,&ofmt_ctx);
     LOGE ( "======================Input Information=====================\n");
     av_dump_format ( ifmt_ctx_v, 0, 0, 0 );
     LOGE ( "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
@@ -461,9 +456,17 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
     LOGE ( "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
     av_dump_format ( ofmt_ctx, 0, 0, 1 );
     LOGE ( "============================================================\n");
+
+    if (!(ofmt->flags & AVFMT_NOFILE)) {
+        if (avio_open(&ofmt_ctx->pb, output_str, AVIO_FLAG_WRITE) < 0) {
+            LOGE( "Could not open output file '%s'", output_str);
+            goto readH264ACC2TS_end;
+        }
+    }
+
 //Write file header 写入TS的头文件
     if (avformat_write_header(ofmt_ctx, NULL) < 0) {
-        LOGE("Error occurred when opening output file");
+        LOGE("Error occurred when write header");
         goto readH264ACC2TS_end;
     }
     LOGE(" muxing packet while");
@@ -489,6 +492,7 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                     if (pkt.stream_index == videoindex_v) {
 //FIX��No PTS (Example: Raw H.264)
 //Simple Write PTS
+                        LOGE("=======gordanxu===video===%lld======",pkt.pts);
                         if (pkt.pts == AV_NOPTS_VALUE) {
 //Write PTS
                             AVRational time_base1 = in_stream->time_base;
@@ -501,6 +505,7 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                             pkt.dts = pkt.pts;
                             pkt.duration = (double) calc_duration /
                                            (double) (av_q2d(time_base1) * AV_TIME_BASE);
+                            LOGE("===video====num:%d===frame_index:%d====calc_duration:%lld==",time_base1.den,frame_index,calc_duration);
                             frame_index++;
                         }
                         cur_pts_v = pkt.pts;
@@ -525,8 +530,10 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                     if (pkt.stream_index == audioindex_a) {
 //FIX��No PTS
 //Simple Write PTS
+                        LOGE("=======gordanxu======%lld======",pkt.pts);
                         if (pkt.pts == AV_NOPTS_VALUE) {
-//Write PTS
+//Write PTS                 音频帧的时候 PTS为 0 修改过后这里其实还是没有执行 音频文件里面没有时间基？
+                            LOGE("=======gordanxu====AV_NOPTS_VALUE========");
                             AVRational time_base1 = in_stream->time_base;
 //Duration between 2 frames (us)
                             int64_t calc_duration =(int64_t)( AV_TIME_BASE / av_q2d(in_stream->r_frame_rate));
@@ -535,8 +542,10 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
                             pkt.dts = pkt.pts;
                             pkt.duration = (int64_t)( calc_duration /(av_q2d(time_base1) * AV_TIME_BASE));
                             frame_index++;
+                            LOGE("====num:%d===frame_index:%d====calc_duration:%lld==",time_base1.den,frame_index,calc_duration);
                         }
                         cur_pts_a = pkt.pts;
+                        LOGE("=======gordanxu====pts========");
                         break;
                     }
                 } while (av_read_frame(ifmt_ctx, &pkt) >= 0);
@@ -557,7 +566,7 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 //Write
         //写入 音视频数据帧
         if (av_interleaved_write_frame(ofmt_ctx, &pkt) < 0) {
-            LOGE("Error muxing packet");
+            LOGE("write frame Error");
             break;
         }
         av_free_packet(&pkt);
@@ -566,23 +575,414 @@ void mergeVideoAudioToTs(JNIEnv *env, jobject obj, jstring input_h264, jstring i
 //Write file trailer 写入TS的尾部
     av_write_trailer(ofmt_ctx);
     readH264ACC2TS_end:
-    LOGE("Error muxing packet");
-    ifmt_ctx_v->pb->opaque = NULL;
-    ifmt_ctx_a->pb->opaque = NULL;
-    avio_close(ifmt_ctx_v->pb);
-    avio_close(ifmt_ctx_a->pb);
+    LOGE("goto module:Error muxing packet");
     avformat_close_input(&ifmt_ctx_v);
     avformat_close_input(&ifmt_ctx_a);
     /* close output */
-    ofmt_ctx->pb->opaque = NULL;
-    if (ofmt_ctx && !(ofmt_ctx->oformat->flags & AVFMT_NOFILE)) {
+    if (ofmt_ctx && !(ofmt->flags& AVFMT_NOFILE)) {
         avio_close(ofmt_ctx->pb);
     }
 
     avformat_free_context(ofmt_ctx);
     if (ret < 0 && ret != AVERROR_EOF) {
-        LOGE("Error occurred");
+        LOGE("goto module:Error occurred");
     }
+}
+
+/****
+ * 解复用的过程（音频和视频分离，前提是得知道视频和音频的编码格式）
+ *
+ * @param env
+ * @param obj
+ * @param input_ts
+ */
+void separateVideoAndAudio(JNIEnv *env, jobject obj,jstring input_ts,jstring output_h264,jstring output_aac)
+{
+    //const char* out_filename_v="/storage/emulated/0/douyin.h264";
+    //const char* out_filename_a="/storage/emulated/0/douyin.aac";
+
+    char in_filename[500] = {0};
+    char out_filename_v[500] ={0};
+    char out_filename_a[500]={0};
+    //JAVA 字符串 转换为 C语言字符串
+    sprintf(in_filename, "%s", (*env)->GetStringUTFChars(env, input_ts, NULL));
+    sprintf(out_filename_v, "%s", (*env)->GetStringUTFChars(env, output_h264, NULL));
+    sprintf(out_filename_a, "%s", (*env)->GetStringUTFChars(env, output_aac, NULL));
+
+    FILE* file_v;
+    FILE* file_a;
+
+    file_v=fopen(out_filename_v,"wb+");
+    if(file_v==NULL)
+    {
+        LOGE("====video file is null so return====");
+        return;
+    }
+
+    file_a=fopen(out_filename_a,"wb+");
+    if(file_a==NULL)
+    {
+        LOGE("====audio file is null so return====");
+        return;
+    }
+    av_log_set_callback(custom_log);
+    av_register_all();
+
+    AVOutputFormat *ofmt_a=NULL,*ofmt_v=NULL;
+    AVFormatContext *ifmt_ctx=NULL,*ofmt_ctx_a=NULL,*ofmt_ctx_v=NULL;
+    AVPacket pck;
+    int ret,i;
+    int videoindex=-1,audioindex=-1;
+    int frameindex=0;
+
+    if((ret=avformat_open_input(&ifmt_ctx,in_filename,NULL,NULL))<0)
+    {
+        //打开输入文件失败
+        LOGE("=====could not open input file so return=====");
+        goto end;
+    }
+
+    if((ret=avformat_find_stream_info(ifmt_ctx,NULL))<0)
+    {
+        //查找音视频流信息失败
+        LOGE("====failed to retrieve stream info so return====");
+        goto end;
+    }
+
+    avformat_alloc_output_context2(&ofmt_ctx_v,NULL,NULL,out_filename_v);
+    if(!ofmt_ctx_v)
+    {
+        //获取输出视频文件上下文失败
+        LOGE("===open output video file failed so return====");
+        goto end;
+    }
+    ofmt_v=ofmt_ctx_v->oformat;
+
+    avformat_alloc_output_context2(&ofmt_ctx_a,NULL,NULL,out_filename_a);
+    if(!ofmt_ctx_a)
+    {
+        //获取输出音频文件上下文失败
+        LOGE("===open output audio file failed so return====");
+        goto end;
+    }
+    ofmt_a=ofmt_ctx_a->oformat;
+
+    for ( i = 0; i < ifmt_ctx->nb_streams; i++)
+    {
+        AVFormatContext *ofmt_ctx;
+        AVStream *in_stream=ifmt_ctx->streams[i];
+        AVStream *out_stream=NULL;
+
+        if(ifmt_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+        {
+            videoindex=i;
+            out_stream=avformat_new_stream(ofmt_ctx_v,in_stream->codec->codec);
+            ofmt_ctx=ofmt_ctx_v;
+            LOGE("===videoindex:%d===",videoindex);
+        }
+        else if(ifmt_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+        {
+            audioindex=i;
+            out_stream=avformat_new_stream(ofmt_ctx_a,in_stream->codec->codec);
+            ofmt_ctx=ofmt_ctx_a;
+            LOGE("===audioindex:%d===",audioindex);
+        } else
+        {
+            break;
+        }
+
+        if(!out_stream)
+        {
+            LOGE("=====allocate output stream failed so return=====");
+            goto end;
+        }
+
+        //复制音视频相关的解码参数
+        if(avcodec_copy_context(out_stream->codec,in_stream->codec)<0)
+        {
+            LOGE("===failed to copy codec so return===");
+            goto end;
+        }
+
+        out_stream->codec->codec_tag=0;
+
+        if(ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        {
+            out_stream->codec->flags |= (1<<22);
+        }
+    }
+
+    //LOGCAT中看不到打印 杨凯的串口可以看见打印
+    printf("\n==============Input Video=============\n");
+    av_dump_format(ifmt_ctx, 0, in_filename, 0);
+    printf("\n==============Output Video============\n");
+    av_dump_format(ofmt_ctx_v, 0, out_filename_v, 1);
+    printf("\n==============Output Audio============\n");
+    av_dump_format(ofmt_ctx_a, 0, out_filename_a, 1);
+    printf("\n======================================\n");
+
+    if(!(ofmt_v->flags & AVFMT_NOFILE))
+    {
+        //打开输出的视频流
+        if(avio_open(&ofmt_ctx_v->pb,out_filename_v,AVIO_FLAG_WRITE)<0)
+        {
+            LOGE("could not open output file %s",out_filename_v);
+            goto end;
+        }
+    }
+
+    if(!(ofmt_a->flags & AVFMT_NOFILE))
+    {
+        //打开输出的音频流
+        if(avio_open(&ofmt_ctx_a->pb,out_filename_a,AVIO_FLAG_WRITE)<0)
+        {
+            LOGE("could not open output file %s",out_filename_a);
+            goto end;
+        }
+    }
+    //写入视频文件的头信息
+    if(avformat_write_header(ofmt_ctx_v,NULL)<0)
+    {
+        LOGE("====write video header failed so return====");
+        goto end;
+    }
+    //写入音频文件的头信息
+    if(avformat_write_header(ofmt_ctx_a,NULL)<0)
+    {
+        LOGE("====write audio header failed so return====");
+        goto end;
+    }
+
+    //AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
+
+    while (1)
+    {
+        AVFormatContext *ofmt_ctx;
+        AVStream *in_stream,*out_stream;
+        //读取一帧音/视频数据（读取出错则跳出）
+        if(av_read_frame(ifmt_ctx,&pck)<0)
+        {
+            LOGE("===read frame failed so break====");
+            break;
+        }
+
+        in_stream=ifmt_ctx->streams[pck.stream_index];
+        if(pck.stream_index==videoindex)
+        {
+            out_stream=ofmt_ctx_v->streams[0];
+            ofmt_ctx=ofmt_ctx_v;
+            //av_bitstream_filter_filter(h264bsfc, in_stream->codec, NULL, &pck.data, &pck.size, pck.data, pck.size, 0);
+            LOGE("===write video packet size:%d pts:%lld====",pck.size,pck.pts);
+        }
+        else if(pck.stream_index == audioindex)
+        {
+            out_stream=ofmt_ctx_a->streams[0];
+            ofmt_ctx=ofmt_ctx_a;
+            LOGE("===write audio packet size:%d pts:%lld====",pck.size,pck.pts);
+        }
+        else
+        {
+            continue;
+        }
+
+        //设置相关的时间基参数
+        pck.pts=av_rescale_q_rnd(pck.pts,in_stream->time_base,out_stream->time_base,(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+        pck.dts=av_rescale_q_rnd(pck.pts,in_stream->time_base,out_stream->time_base,(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+        pck.duration=av_rescale_q(pck.duration,in_stream->time_base,out_stream->time_base);
+        pck.pos=-1;
+        pck.stream_index=0;
+        //将一帧音/视频数据写入输出文件
+        if(av_interleaved_write_frame(ofmt_ctx,&pck)<0)
+        {
+            LOGE("===write frame error so return===");
+            break;
+        }
+        av_free_packet(&pck);
+        frameindex++;
+        LOGE("=========frameindex:%d======",frameindex);
+    }
+
+    //av_bitstream_filter_close(h264bsfc);
+
+    //写入音视频文件的尾
+    av_write_trailer(ofmt_ctx_a);
+    av_write_trailer(ofmt_ctx_v);
+
+    end:
+    //关闭输入流
+    avformat_close_input(&ifmt_ctx);
+
+    //关闭音频输出流
+    if(ofmt_ctx_a && !(ofmt_a->flags & AVFMT_NOFILE))
+    {
+        avio_close(ofmt_ctx_a->pb);
+    }
+
+    //关闭视频输出流
+    if(ofmt_ctx_v && !(ofmt_v->flags & AVFMT_NOFILE))
+    {
+        avio_close(ofmt_ctx_v->pb);
+    }
+
+    avformat_free_context(ofmt_ctx_a);
+    avformat_free_context(ofmt_ctx_v);
+}
+
+/****
+ *
+ * 封装格式转换
+ *
+ * @param env
+ * @param obj
+ * @param input
+ * @param output
+ */
+void convertMediaFormat(JNIEnv *env, jobject obj,jstring input,jstring output)
+{
+    char in_filename[500] = {0};
+    char out_filename[500] = {0};
+
+    sprintf(in_filename,"%s",(*env)->GetStringUTFChars(env,input,NULL));
+    sprintf(out_filename,"%s",(*env)->GetStringUTFChars(env,output,NULL));
+
+    FILE *file_in;
+    FILE *file_out;
+
+    file_in=fopen(in_filename,"ab");
+    if(file_in == NULL)
+    {
+        LOGE("=====input file is null so return======");
+        return;
+    }
+    file_out=fopen(out_filename,"wb+");
+    if(file_out == NULL)
+    {
+        LOGE("=====output file is null so return======");
+        return;
+    }
+
+    AVOutputFormat *ofmt=NULL;
+    AVFormatContext *ifmt_ctx=NULL,*ofmt_ctx=NULL;
+    AVPacket pkt;
+    int ret,i;
+    LOGE("=====register all======");
+    av_register_all();
+    //打开输入文件
+    if((ret=avformat_open_input(&ifmt_ctx,in_filename,0,0))<0)
+    {
+        LOGE("====open input file failed so return=====");
+        goto end;
+    }
+    //查找输入文件中的音视频流信息
+    if((ret=avformat_find_stream_info(ifmt_ctx,0))<0)
+    {
+        LOGE("====find stream info failed so return=====");
+        goto end;
+    }
+
+    //收集输入文件的流媒体信息（无法打印到LOGCAT平台 不过串口似乎可以看到）
+    av_dump_format(ifmt_ctx,0,in_filename,0);
+
+    //获取输出文件的上下文
+    avformat_alloc_output_context2(&ofmt_ctx,NULL,NULL,out_filename);
+
+    if(!ofmt_ctx)
+    {
+        LOGE("can not allocate output context");
+        goto end;
+    }
+    //复制输出文件的格式信息（注意格式是根据文件名的后缀来区分，为后面添加对应格式的头和尾信息）
+    ofmt=ofmt_ctx->oformat;
+
+    for (i = 0; i <ifmt_ctx->nb_streams ; i++) {
+        AVStream *in_stream=ifmt_ctx->streams[i];
+        AVStream *out_stream=avformat_new_stream(ofmt_ctx,in_stream->codec->codec);
+
+        if(!out_stream)
+        {
+            LOGE("alloct out_stream failed so return");
+            goto end;
+        }
+
+        //将输入流的解码器复制到输出流？
+        ret=avcodec_copy_context(out_stream->codec,in_stream->codec);
+        if(ret<0)
+        {
+            LOGE("failed copy codec so return");
+            goto end;
+        }
+
+        out_stream->codec->codec_tag=0;
+        if(ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+        {
+            out_stream->codec->flags |=(1<<22);
+        }
+    }
+
+    av_dump_format(ofmt_ctx,0,out_filename,1);
+
+    if(!(ofmt->flags & AVFMT_NOFILE))
+    {
+        ret=avio_open(&ofmt_ctx->pb,out_filename,AVIO_FLAG_WRITE);
+        if(ret<0)
+        {
+            LOGE("can not open output file!");
+            goto end;
+        }
+    }
+    //写入输出文件的头
+    ret=avformat_write_header(ofmt_ctx,NULL);
+    if(ret<0)
+    {
+        LOGE("write header error so return");
+        goto end;
+    }
+
+    int frame_index=0;
+    while(1)
+    {
+        AVStream *in_stream,*out_stream;
+        //读取音视频帧数据
+        ret=av_read_frame(ifmt_ctx,&pkt);
+        if(ret<0)
+        {
+            LOGE("read frame failed so return");
+            break;
+        }
+
+        in_stream=ifmt_ctx->streams[pkt.stream_index];
+        out_stream=ofmt_ctx->streams[pkt.stream_index];
+        //时间基的相互转化
+        pkt.pts=av_rescale_q_rnd(pkt.pts,in_stream->time_base,out_stream->time_base,(AV_ROUND_INF|AV_ROUND_PASS_MINMAX));
+        pkt.dts=av_rescale_q_rnd(pkt.dts,in_stream->time_base,out_stream->time_base,(AV_ROUND_INF|AV_ROUND_PASS_MINMAX));
+        pkt.duration=av_rescale_q(pkt.duration,in_stream->time_base,out_stream->time_base);
+        pkt.pos=-1;
+        //写入音视频帧数据
+        ret=av_write_frame(ofmt_ctx,&pkt);
+        if(ret<0)
+        {
+            LOGE("===write frame failed so return===");
+            break;
+        }
+        LOGE("===write frameindex:%d===",frame_index);
+        av_free_packet(&pkt);
+        frame_index++;
+    }
+    //写入输出文件的尾
+    av_write_trailer(ofmt_ctx);
+
+    end:
+
+    LOGE("====end module===");
+    //关闭输入流
+    avformat_close_input(&ifmt_ctx);
+    //关闭输出流
+    if(ofmt_ctx && !(ofmt->flags&AVFMT_NOFILE))
+    {
+        avio_close(ofmt_ctx->pb);
+    }
+    avformat_free_context(ofmt_ctx);
+
 
 }
 
@@ -717,7 +1117,9 @@ static const JNINativeMethod method[] = {
         {"avfilterinfo",       "()Ljava/lang/String;",   (void *) getAVFilterInfo},
         {"configurationinfo",  "()Ljava/lang/String;",   (void *) getProtocolInfo},
         {"convertVideoFormat", "([Ljava/lang/String;)I", (void *) convertVideo},
-        {"mergeVideoAndAudio","(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",(void *)mergeVideoAudioToTs}
+        {"mergeVideoAndAudio","(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",(void *)mergeVideoAudioToTs},
+        {"separateVideoAndAudio","(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",(void *)separateVideoAndAudio},
+        {"convertMediaFormat","(Ljava/lang/String;Ljava/lang/String;)V",(void*)convertMediaFormat}
 };
 
 

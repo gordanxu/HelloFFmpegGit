@@ -1,6 +1,9 @@
 package com.gordan.helloffmpeg;
 
 import android.annotation.TargetApi;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -11,18 +14,23 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.gordan.baselibrary.BaseActivity;
+import com.gordan.baselibrary.util.LogUtils;
+import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.PcmToWavUtil;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import butterknife.Bind;
 import butterknife.OnClick;
@@ -31,11 +39,16 @@ public class AudioActivity extends BaseActivity {
 
     final static String TAG = AudioActivity.class.getSimpleName();
 
+    @Bind(R.id.tv_tips)
+    TextView tvTips;
+
     @Bind(R.id.et_audio_output)
     EditText etAudioPath;
 
     @Bind(R.id.btn_audio)
-    Button btnAudio;
+    TextView btnAudio;
+
+    ExecutorService mExecutorService;
 
     private AudioRecord mAudioRecord;
 
@@ -53,13 +66,16 @@ public class AudioActivity extends BaseActivity {
 
     File sdcardFile;
 
-    String outputPath = "gordan.wav";//添加包头之后文件名
+    String path = "", outputPath = "gordan.wav";//添加包头之后文件名
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         sdcardFile = Environment.getExternalStorageDirectory();
+        tvTips.setText("设备存储卡路径: " + sdcardFile.getAbsolutePath());
+
+        mExecutorService = Executors.newFixedThreadPool(2);
     }
 
 
@@ -71,15 +87,54 @@ public class AudioActivity extends BaseActivity {
     @Override
     protected void handleBaseMessage(Message message) {
 
+        switch (message.what) {
+            case Constant.MSG_COPY_FINISHED:
+
+                showText("存储卡路径复制成功！");
+
+                break;
+
+
+            case Constant.MSG_COMMAND_EXECUTE_FINISHED:
+                showText("音频文件格式转换完成！");
+                break;
+        }
     }
 
-    @OnClick({R.id.btn_audio, R.id.btn_convert, R.id.btn_play})
+    @OnClick({R.id.tv_copy, R.id.btn_audio, R.id.btn_convert, R.id.btn_play})
     public void onViewClick(View view) {
         switch (view.getId()) {
+
+            case R.id.tv_copy:
+
+                path = sdcardFile.getAbsolutePath();
+                ClipboardManager mClipboardManager = (ClipboardManager) this.getSystemService(Context.CLIPBOARD_SERVICE);
+                mClipboardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
+                    @Override
+                    public void onPrimaryClipChanged() {
+
+                        LogUtils.i(TAG, "===onPrimaryClipChanged====", false);
+
+                        mHandler.sendEmptyMessage(Constant.MSG_COPY_FINISHED);
+
+                    }
+                });
+
+                ClipData mClipData = ClipData.newPlainText("gordan", path);
+                mClipboardManager.setPrimaryClip(mClipData);
+
+                break;
+
             case R.id.btn_audio:
 
-                String path = etAudioPath.getText() + "";
+                path = etAudioPath.getText() + "";
                 path = path.trim();
+
+                if (TextUtils.isEmpty(path)) {
+                    showText("音频路径不能为空！");
+                    return;
+                }
+
                 try {
                     if (btnAudio.getTag() != null && "1".equalsIgnoreCase(btnAudio.getTag() + "")) {
                         //再按一次停止录音
@@ -97,7 +152,7 @@ public class AudioActivity extends BaseActivity {
                             readBufSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
                             data = new byte[readBufSize];
                             mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRateInHz, channelConfig, audioFormat, readBufSize);
-                            final File pcmFile = new File(sdcardFile, path);
+                            final File pcmFile = new File(path);
                             if (pcmFile.exists()) {
                                 pcmFile.delete();
                             }
@@ -148,34 +203,52 @@ public class AudioActivity extends BaseActivity {
             case R.id.btn_convert:
                 path = etAudioPath.getText() + "";
                 path = path.trim();
-                PcmToWavUtil pcmToWavUtil = new PcmToWavUtil(sampleRateInHz, channelConfig, audioFormat);
 
-                File pcmFile = new File(sdcardFile, path);
-                File wavFile = new File(sdcardFile, outputPath);
-
-                if (wavFile.exists()) {
-                    wavFile.delete();
+                if (TextUtils.isEmpty(path)) {
+                    showText("音频路径不能为空！");
+                    return;
                 }
-                pcmToWavUtil.pcmToWav(pcmFile.getAbsolutePath(), wavFile.getAbsolutePath());
+                mExecutorService.execute(new Runnable() {
+                    @Override
+                    public void run() {
 
-                showText("转码完成");
+                        //避免阻塞主线程 在工作线程中转换
+
+                        PcmToWavUtil pcmToWavUtil = new PcmToWavUtil(sampleRateInHz, channelConfig, audioFormat);
+                        //转换成WAV后文件的输出路径（APP的缓存目录下）
+                        outputPath = sdcardFile.getAbsolutePath() + File.separator + Constant.CACHE_FILE + File.separator + "gordan.wav";
+
+                        File pcmFile = new File(path);
+                        File wavFile = new File(outputPath);
+
+                        if (wavFile.exists()) {
+                            wavFile.delete();
+                        }
+                        //给音频的PCM裸流文件添加WAV格式的头和尾信息
+                        pcmToWavUtil.pcmToWav(pcmFile.getAbsolutePath(), wavFile.getAbsolutePath());
+
+                        mHandler.sendEmptyMessage(Constant.MSG_COMMAND_EXECUTE_FINISHED);
+                    }
+                });
 
                 break;
 
             case R.id.btn_play:
 
-                //利用AudioTrack播放裸流
+                //利用AudioTrack播放PCM的音频裸流数据
                 path = etAudioPath.getText() + "";
                 path = path.trim();
+
+                if (TextUtils.isEmpty(path)) {
+                    showText("音频路径不能为空！");
+                    return;
+                }
 
                 playInModeStream(path);
 
                 break;
         }
-
     }
-
-
 
     FileInputStream fileInputStream;
 
@@ -205,7 +278,7 @@ public class AudioActivity extends BaseActivity {
         audioTrack.play();
 
         Log.i(TAG, "========start play=======");
-        File file = new File(sdcardFile, name);
+        File file = new File(name);
         try {
             fileInputStream = new FileInputStream(file);
             new Thread(new Runnable() {

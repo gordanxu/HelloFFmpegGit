@@ -49,7 +49,6 @@ import android.widget.PopupWindow;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
-import com.gordan.baselibrary.util.AssetsUtils;
 import com.gordan.helloffmpeg.adapter.MusicAdapter;
 import com.gordan.helloffmpeg.model.MusicModel;
 import com.gordan.helloffmpeg.util.Constant;
@@ -78,6 +77,7 @@ import butterknife.OnClick;
  * 视频拍摄时间默认是 15 秒 若中途用户主动放弃 则程序记录拍摄时间
  *
  *
+ * 写伪代码 写注释 有助于自己梳理思路
  *
  *
  *
@@ -132,7 +132,9 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
 
     MediaRecorder mMediaRecorder;
 
-    File sdcardFile;
+    //File sdcardFile;
+
+    String videoName,destVideoName;
 
     private Size mVideoSize;
 
@@ -154,20 +156,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         super.onCreate(savedInstanceState);
         getWindowManager().getDefaultDisplay().getMetrics(mDisplayMetrics);
         Log.i(TAG,mDisplayMetrics.widthPixels+"======mDisplayMetrics======"+mDisplayMetrics.heightPixels);
-        sdcardFile = Environment.getExternalStorageDirectory();
-
         mExecutorService=Executors.newFixedThreadPool(2);
-
-        mExecutorService.execute(new Runnable() {
-            @Override
-            public void run() {
-
-
-                AssetsUtils.copyFileFromAssets(CameraActivity.this,"music",sdcardFile.getAbsolutePath());
-
-            }
-        });
-
     }
 
     @Override
@@ -212,24 +201,32 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
             case Constant.MSG_TAKE_VIDEO:
 
 
-
                 break;
 
                 case Constant.MSG_VIDEO_MUSIC_FINISH:
 
+                    //合成结束 跳转播放
                     if(mProgressDialog!=null)
                     {
                         mProgressDialog.dismiss();
                         mProgressDialog=null;
                     }
 
-                    String url=sdcardFile.getAbsolutePath()+File.separator+"output.mp4";
+                    String url=getAppCachePath(destVideoName);
+
+                    //通知系统 更新MediaStore数据库
+                    sendBroadcastMedia(url);
 
                     Intent intent=new Intent(this,PlayerActivity.class);
                     intent.putExtra("url",url);
                     this.startActivity(intent);
 
                     break;
+
+            case Constant.MSG_TAKE_PICTURE_FINISHED:
+
+                showText("拍照完成，照片路径:"+message.obj);
+                break;
         }
 
     }
@@ -311,9 +308,20 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         public void onImageAvailable(ImageReader reader) {
             Log.i(TAG, "====onImageAvailable()======");
             //这里的回调不会每次都执行 只会在拍照结束以后调用
-            File imageFile = new File(sdcardFile.getAbsolutePath(), "gordan.jpg");
+
+            //拍照后图片保存
+            String fileName=System.currentTimeMillis()+".jpg";
+
+            File imageFile = new File(getAppCachePath(fileName));
 
             mWorkHandler.post(new ImageSaver(reader.acquireNextImage(), imageFile));
+
+            Message message=new Message();
+            message.what=Constant.MSG_TAKE_PICTURE_FINISHED;
+            message.obj=imageFile.getAbsolutePath();
+            mHandler.sendMessage(message);
+
+
         }
     };
 
@@ -344,6 +352,7 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
 
         SurfaceTexture mTexture = mTextureView.getSurfaceTexture();
 
+        //这是沿用了C++中的  断言 函数 一旦这个 mTexture纹理为空 则程序不会执行后面的代码
         assert mTexture != null;
 
         try {
@@ -516,7 +525,9 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
     private void setUpMediaRecorder() {
         try {
 
-            File mOutPutFile = new File(Environment.getExternalStorageDirectory(), "gordan.mp4");
+            videoName=System.currentTimeMillis()+".mp4";
+
+            File mOutPutFile = new File(getAppCachePath(videoName));
 
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
@@ -569,9 +580,16 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         mMediaRecorder.reset();
         //摄像的铃声找不到--
         shootSound("file:///system/media/audio/ui/camera_click.ogg");
+
+        //通知系统 更新MediaStore数据库
+        sendBroadcastMedia(getAppCachePath(videoName));
+
         //再次开启预览
         startPreview();
     }
+
+
+
 
     MediaPlayer mMediaPlayer = null;
 
@@ -653,6 +671,11 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendBroadcastMedia(String path) {
+        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(new File(path)));
+        this.sendBroadcast(intent);
     }
 
 
@@ -819,15 +842,22 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
         mTextureView.setTransform(matrix);
     }
 
+    private String getAppCachePath(String filename)
+    {
+        File sdcardFile = Environment.getExternalStorageDirectory();
+
+        return sdcardFile.getAbsolutePath()+File.separator+Constant.CACHE_FILE+File.separator+filename;
+    }
 
 
     @Override
     public void onItemClick(View item, int position) {
         Log.i(TAG,"=====onItemClick======"+position);
+        //试听音乐
         if(position<mList.size())
         {
             MusicModel model=mList.get(position);
-            String url=sdcardFile.getAbsolutePath()+File.separator+model.name;
+            String url=getAppCachePath(model.name);
             Log.i(TAG,"======url====="+url);
 
             shootSound(url);
@@ -839,10 +869,12 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
     @Override
     public void onItemUseClick(View item, int position) {
         Log.i(TAG,"=====onItemUseClick======"+position);
+        //选择音乐并开始替换背景音乐
         if(position<mList.size())
         {
             MusicModel model=mList.get(position);
-            String url=sdcardFile.getAbsolutePath()+File.separator+model.name;
+            //替换的音乐路径
+            String url=getAppCachePath(model.name);
             Log.i(TAG,"======url====="+url);
 
             //提前发送 （用户可能不选择铃声）
@@ -857,9 +889,12 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
                     .progressNumberFormat("%1d/%2d").canceledOnTouchOutside(false).build();
             mProgressDialog.show();
 
-            String jniStr="ffmpeg -i "+sdcardFile.getAbsolutePath()+File.separator+"gordan.mp4 -i "+
+            //最终替换音乐之后视频的保存路径（注意此路径在合成结束后还需要根据此路径进行播放）
+            destVideoName=System.currentTimeMillis()+".mp4";
+
+            String jniStr="ffmpeg -i "+getAppCachePath(videoName)+" -i "+
                     url+" -c:v copy -c:a mp3 -acodec libmp3lame -t 15 -strict experimental -map 0:v:0 -map 1:a:0 "+
-                    sdcardFile.getAbsolutePath()+File.separator+"output.mp4";
+                    getAppCachePath(destVideoName);
             Log.i(TAG,"======jniStr====="+jniStr);
             //开始合成音乐与视频
             executeConvertCommand(jniStr);
@@ -1005,6 +1040,9 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
             try {
                 output = new FileOutputStream(mFile);
                 output.write(bytes);
+
+
+
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
@@ -1016,7 +1054,6 @@ public class CameraActivity extends BaseActivity implements MusicAdapter.ItemCli
                         e.printStackTrace();
                     }
                 }
-
                 Log.i(TAG, "=====save image success=====");
             }
         }

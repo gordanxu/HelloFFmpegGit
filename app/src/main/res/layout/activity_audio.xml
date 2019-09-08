@@ -4,8 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/black"
     android:orientation="vertical"
-    android:padding="20dp"
+    android:padding="10dp"
     tools:context=".AudioActivity">
 
     <LinearLayout
@@ -14,37 +15,69 @@
         android:orientation="horizontal">
 
         <TextView
-            android:layout_width="120dp"
+            android:id="@+id/tv_tips"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:text="存储卡的路径为:"
+            android:textColor="@color/colorPrimary"
+            android:textIsSelectable="true"
+            android:textSize="@dimen/text_16" />
+
+        <TextView
+            android:id="@+id/tv_copy"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:text="复制"
+            android:textColor="@color/colorPrimary"
+            android:textSize="@dimen/text_18" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:gravity="center_vertical"
-            android:text="音频输出路径:" />
+            android:text="音频路径:"
+            android:textColor="@android:color/white" />
 
         <EditText
             android:id="@+id/et_audio_output"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@null"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:background="@drawable/bg_edit_black"
             android:gravity="center_vertical"
-            android:text="output.pcm" />
+            android:paddingLeft="10dp"
+            android:hint="输入路径，如 output.pcm"
+            android:textColorHint="@android:color/white"
+            android:textColor="@android:color/white" />
 
     </LinearLayout>
 
-    <Button
+    <TextView
         android:id="@+id/btn_audio"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/tv_button_style"
         android:text="开始录音" />
 
-    <Button
+    <TextView
         android:id="@+id/btn_convert"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/tv_button_style"
         android:text="转换" />
 
-    <Button
+    <TextView
         android:id="@+id/btn_play"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/tv_button_style"
         android:text="播放" />
 </LinearLayout>

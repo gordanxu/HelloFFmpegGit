@@ -9,14 +9,42 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
-        android:name="com.gordan.baselibrary.BaseApplication"
+        android:name=".HelloApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".RecycleActivity"/>
+        <service
+            android:name=".MediaIntentService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.gordan.helloffmpeg.MediaIntentService"/>
+            </intent-filter>
+        </service>
+
+        <activity android:name=".VideoMine" />
+        <activity android:name=".MusicNative" />
+        <activity android:name=".MusicNet" />
+        <activity android:name=".IndexActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ListActivity">
+
+            <!--
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            -->
+        </activity>
+        <activity android:name=".RecycleActivity" />
         <activity android:name=".MergeActivity" />
         <activity android:name=".FilterActivity" />
         <activity android:name=".MarkActivity" />
@@ -24,11 +52,13 @@
         <activity
             android:name=".HomeActivity"
             android:launchMode="singleTask">
+
+            <!--
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            -->
         </activity>
         <activity
             android:name=".PlayerActivity"

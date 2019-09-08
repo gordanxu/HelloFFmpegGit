@@ -2,6 +2,9 @@ package com.gordan.helloffmpeg.util;
 
 public class Constant {
 
+    public static final String CACHE_FILE="gordanxu";
+
+    public static final String WATER_MARK_DEFAULT="video_water.png";
 
     /*****视频拍摄的最长时间 15 秒*****/
     public static final int VIDEO_TAKE_MAX_TIME=15000;
@@ -18,6 +21,11 @@ public class Constant {
 
     public static final int MSG_TAKE_PICTURE=10014;
 
+    public static final int MSG_MUSIC_QUERY_FINISHED=10015;
+
+    public static final int MSG_COPY_FINISHED=10016;
+
+    public static final int MSG_TAKE_PICTURE_FINISHED=10017;
 
     public static final int FLAG_SCAN_VIDEO_REQUEST_CODE=20000;
 

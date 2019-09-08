@@ -31,6 +31,14 @@ import java.util.concurrent.Executors;
 import butterknife.Bind;
 import butterknife.OnClick;
 
+
+/********
+ * 将视频转换为   YUV 裸视频流
+ *
+ * 其实质也是利用了ffmpeg命令
+ *
+ *
+ */
 public class DecodeActivity extends BaseActivity {
 
     final static String TAG = DecodeActivity.class.getSimpleName();
@@ -156,7 +164,6 @@ public class DecodeActivity extends BaseActivity {
                 String dateStr = mCalendar.get(Calendar.YEAR) + "" + (mCalendar.get(Calendar.MONTH) + 1) + "" + mCalendar.get(Calendar.DAY_OF_MONTH);
 
                 Log.i(TAG, "=====dateStr====" + dateStr);
-
 
                 output = sdcardFile.getAbsolutePath() + File.separator + dateStr+".yuv";
 

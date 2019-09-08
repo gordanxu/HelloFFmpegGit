@@ -1,18 +1,21 @@
 package com.gordan.helloffmpeg;
 
-import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.os.Environment;
 import android.os.Message;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
 import com.gordan.baselibrary.util.LogUtils;
-import com.gordan.baselibrary.util.MD5Utils;
 import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.FfmpegUtil;
 
@@ -22,7 +25,6 @@ import java.util.concurrent.Executors;
 
 import butterknife.Bind;
 import butterknife.OnClick;
-
 
 /****
  * 存在的问题：
@@ -42,6 +44,9 @@ public class MainActivity extends BaseActivity {
 
     FfmpegUtil mFfmpegUtil;
 
+    @Bind(R.id.tv_tips)
+    TextView tvTips;
+
     @Bind(R.id.et_command)
     EditText etCommand;
 
@@ -58,6 +63,13 @@ public class MainActivity extends BaseActivity {
     protected void handleBaseMessage(Message message) {
 
         switch (message.what) {
+
+
+            case Constant.MSG_COPY_FINISHED:
+
+                showText("存储卡路径复制成功！");
+                break;
+
             case Constant
                     .MSG_COMMAND_EXECUTE_FINISHED:
 
@@ -79,60 +91,35 @@ public class MainActivity extends BaseActivity {
         sdcard = Environment.getExternalStorageDirectory();
         mFfmpegUtil = new FfmpegUtil();
 
-
-
+        tvTips.setText("设备存储卡路径: "+sdcard.getAbsolutePath());
     }
 
     MaterialDialog mProgressDialog;
 
     String jniStr = "";
 
-    @OnClick({R.id.btn_cpu, R.id.btn_protocol, R.id.btn_codec, R.id.btn_filter, R.id.btn_format,
-            R.id.btn_configure, R.id.tv_command_finish})
+    @OnClick({R.id.tv_copy,R.id.tv_command_finish})
     public void onViewClick(View view) {
         switch (view.getId()) {
-            case R.id.btn_cpu:
 
-                jniStr = mFfmpegUtil.cpuInfo();
-                showText(jniStr);
+            case R.id.tv_copy:
 
-                break;
+                String path=sdcard.getAbsolutePath();
+                ClipboardManager mClipboardManager=(ClipboardManager)this.getSystemService(Context.CLIPBOARD_SERVICE);
+                mClipboardManager.addPrimaryClipChangedListener(new ClipboardManager.OnPrimaryClipChangedListener() {
+                    @Override
+                    public void onPrimaryClipChanged() {
 
-            case R.id.btn_codec:
+                        LogUtils.i(TAG,"===onPrimaryClipChanged====",false);
 
-                jniStr = mFfmpegUtil.avcodecinfo();
-                Intent intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content", jniStr);
-                this.startActivity(intent);
-                break;
+                        mHandler.sendEmptyMessage(Constant.MSG_COPY_FINISHED);
 
-            case R.id.btn_format:
-                jniStr = mFfmpegUtil.avformatinfo();
-                intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content", jniStr);
-                this.startActivity(intent);
-                break;
+                    }
+                });
 
-            case R.id.btn_protocol:
-                jniStr = mFfmpegUtil.urlprotocolinfo();
-                intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content", jniStr);
-                this.startActivity(intent);
-                break;
+                ClipData mClipData=ClipData.newPlainText("gordan",path);
+                mClipboardManager.setPrimaryClip(mClipData);
 
-            case R.id.btn_filter:
-                jniStr = mFfmpegUtil.avfilterinfo();
-                intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content", jniStr);
-                this.startActivity(intent);
-                break;
-
-            case R.id.btn_configure:
-
-                jniStr = mFfmpegUtil.configurationinfo();
-                intent = new Intent(this, InfoActivity.class);
-                intent.putExtra("content", jniStr);
-                this.startActivity(intent);
                 break;
 
 
@@ -149,7 +136,9 @@ public class MainActivity extends BaseActivity {
 
                 Log.i(TAG, "=====jniStr=====" + jniStr);
                 MaterialDialog.Builder mBuilder = new MaterialDialog.Builder(this);
-                mProgressDialog = mBuilder.content("命令执行中,请稍后...").progress(true, 100, true)
+                mProgressDialog = mBuilder.content("命令执行中,请稍后...")
+                        .contentColor(ContextCompat.getColor(this,R.color.colorAccent))
+                        .progress(true, 100, true)
                         .progressNumberFormat("%1d/%2d").canceledOnTouchOutside(false).build();
                 mProgressDialog.show();
 

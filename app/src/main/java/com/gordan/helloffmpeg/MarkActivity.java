@@ -3,70 +3,76 @@ package com.gordan.helloffmpeg;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Message;
-
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
+import android.view.ViewStub;
 import android.widget.TextView;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.gordan.baselibrary.BaseActivity;
+import com.gordan.baselibrary.easyadapter.helper.OnRvItemClickListener;
+import com.gordan.baselibrary.util.LogUtils;
+import com.gordan.baselibrary.view.SpacesItemDecoration;
+import com.gordan.helloffmpeg.adapter.VideoAdapter;
+import com.gordan.helloffmpeg.model.VideoModel;
 import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.util.FfmpegUtil;
+import com.shuyu.gsyvideoplayer.video.StandardGSYVideoPlayer;
 
 import java.io.File;
-import java.util.Calendar;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import butterknife.Bind;
-import butterknife.OnClick;
-
-public class MarkActivity extends BaseActivity {
 
 
+/******
+ * 视频水印生成得特别的慢 抖音是利用OpenGL直接渲染的
+ *
+ *
+ * 拍摄的视频上就添加水印图片 不必再生成一个新的视频文件？
+ *
+ * 拍摄的视频自动就添加水印了
+ *
+ * *****/
+
+public class MarkActivity extends BaseActivity implements OnRvItemClickListener,
+        VideoAdapter.ItemFocusedInterface, View.OnClickListener {
     final static String TAG = MarkActivity.class.getSimpleName();
 
     DisplayMetrics mDisplayMetrics = new DisplayMetrics();
 
-    @Bind(R.id.ll_video_output)
-    LinearLayout llVideoOutput;
+    @Bind(R.id.vs_title)
+    ViewStub vsTitle;
 
-    @Bind(R.id.iv_video_cover)
-    ImageView ivCover;
+    @Bind(R.id.rv_video_list)
+    RecyclerView rvListVideo;
 
-    @Bind(R.id.tv_video_title)
-    TextView tvTitle;
+    @Bind(R.id.gsv_player)
+    StandardGSYVideoPlayer gsvPlayer;
 
-    @Bind(R.id.tv_choose)
-    TextView tvChoose;
+    VideoAdapter mAdapter;
 
-    @Bind(R.id.tv_video_output)
-    TextView tvOutputPath;
+    List<VideoModel> mVideoList;
 
-    @Bind(R.id.tv_command_finish)
-    TextView tvFinish;
+    int selectedIndex = -1;
 
-    String input, output;
+    String input,output;
 
     FfmpegUtil mFfmpegUtil;
 
     ExecutorService mExecutorService = null;
-
-    Calendar mCalendar;
-
-    File sdFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,13 +82,29 @@ public class MarkActivity extends BaseActivity {
 
         this.getWindowManager().getDefaultDisplay().getMetrics(mDisplayMetrics);
 
-        sdFile = Environment.getExternalStorageDirectory();
+        View title = vsTitle.inflate();
+        TextView tvTitle = (TextView) title.findViewById(R.id.tv_title);
+        tvTitle.setText("本地视频");
+        ((TextView)title.findViewById(R.id.tv_next)).setText("完成");
+        title.findViewById(R.id.iv_back).setOnClickListener(this);
+        title.findViewById(R.id.tv_next).setOnClickListener(this);
+
+        rvListVideo.setLayoutManager(new GridLayoutManager(this, 3));
+
+        initPlayer();
+
+        getVideoList();
 
         mExecutorService = Executors.newFixedThreadPool(1);
 
         mFfmpegUtil = new FfmpegUtil();
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
 
+        gsvPlayer.onVideoResume();
     }
 
     @Override
@@ -94,6 +116,21 @@ public class MarkActivity extends BaseActivity {
     protected void handleBaseMessage(Message message) {
         Log.i(TAG, "=======handleBaseMessage()======");
         switch (message.what) {
+
+
+            case Constant.MSG_MUSIC_QUERY_FINISHED:
+
+                //Adapter中生成视频的缩略图的时候耗时太长
+                mAdapter = new VideoAdapter(this, mVideoList, R.layout.item_video);
+                mAdapter.setItemClickListener(this);
+                mAdapter.setItemFocusedInterface(this);
+                rvListVideo.setAdapter(mAdapter);
+                rvListVideo.addItemDecoration(new SpacesItemDecoration(5));
+
+
+                break;
+
+
             case Constant.MSG_COMMAND_EXECUTE_FINISHED:
 
 
@@ -104,56 +141,122 @@ public class MarkActivity extends BaseActivity {
 
                 showText("处理完成！");
 
-                llVideoOutput.setVisibility(View.VISIBLE);
-                tvOutputPath.setText(output);
+                sendBroadcastMedia(output);
 
+                Intent intent = new Intent(this, PlayerActivity.class);
+                intent.putExtra("url", output);
+                this.startActivity(intent);
 
-                tvFinish.setEnabled(false);
-                tvFinish.setClickable(false);
-                tvFinish.setBackground(ContextCompat.getDrawable(this, R.drawable.button_bg_gray));
-
+                this.finish();
 
                 break;
         }
     }
 
+    private void initPlayer() {
+
+        //String source1 = "http://9890.vod.myqcloud.com/9890_4e292f9a3dd011e6b4078980237cc3d3.f20.mp4";
+        //gsvPlayer.setUp(source1, true, "测试视频");
+
+        //增加封面
+        /*ImageView imageView = new ImageView(this);
+        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageView.setImageResource(R.mipmap.xxx1);
+        gsvPlayer.setThumbImageView(imageView);*/
+        //增加title
+        gsvPlayer.getTitleTextView().setVisibility(View.GONE);
+        //设置返回键
+        gsvPlayer.getBackButton().setVisibility(View.GONE);
+        //设置全屏按键
+        gsvPlayer.getFullscreenButton().setVisibility(View.GONE);
+        //是否可以滑动调整
+        gsvPlayer.setIsTouchWiget(true);
+
+        //gsvPlayer.startPlayLogic();
+    }
+
+    public void getVideoList() {
+
+        mVideoList = new ArrayList<>();
+
+        ContentResolver contentResolver = this.getContentResolver();
+        Uri uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+        //音频文件 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        //图片文件 MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+
+        //与网上的APP相比 该种查询数据库的方式并不能完整查询到视频
+
+        //若有新增的视频文件无法自动更新 (只有Android系统重新启动才会自动更新)
+        //通知系统进行媒体文件扫描的广播已经失效 android.intent.action.MEDIA_MOUNTED
+        String[] projection = null;
+        String selection = null;
+        //MediaStore.Video.Media.MIME_TYPE + "=? or " + MediaStore.Video.Media.MIME_TYPE + "=?";
+        String[] selectionArgs = null;
+        //new String[]{"video/mp4", "video/avi"};
+        String sortOrder = null;
+        //MediaStore.Video.Media.DEFAULT_SORT_ORDER;
+        Cursor cursor = contentResolver.query(uri, projection, selection, selectionArgs, sortOrder);
+
+        while (cursor != null && cursor.moveToNext()) {
+            VideoModel model = new VideoModel();
+            model.id = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
+            model.title = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.TITLE));
+            model.path = cursor.getString(cursor.getColumnIndex(MediaStore.Video.Media.DATA));
+            model.time = cursor.getLong(cursor.getColumnIndex(MediaStore.Video.Media.DATE_ADDED));
+            model.duration = cursor.getLong(cursor.getColumnIndex(MediaStore.Video.Media.DURATION));
+            LogUtils.i(TAG, "==media==" + model.path, false);
+            mVideoList.add(model);
+        }
+        cursor.close();
+
+        mHandler.sendEmptyMessage(Constant.MSG_MUSIC_QUERY_FINISHED);
+    }
+
+
+    private void sendBroadcastMedia(String path) {
+        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(new File(path)));
+        this.sendBroadcast(intent);
+    }
+
     MaterialDialog mProgressDialog;
 
-    @OnClick({R.id.tv_choose, R.id.tv_command_finish})
-    public void onViewClick(View view) {
-        switch (view.getId()) {
-            case R.id.tv_choose:
-                Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent, Constant.FLAG_SCAN_VIDEO_REQUEST_CODE);
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.iv_back:
+
+                this.finish();
+
                 break;
 
+            case R.id.tv_next:
 
-            case R.id.tv_command_finish:
+                if (selectedIndex < 0) {
+                    return;
+                }
+
+                input = mVideoList.get(selectedIndex).path;
 
                 MaterialDialog.Builder mBuilder = new MaterialDialog.Builder(this);
-                mProgressDialog = mBuilder.content("处理中,请稍后...").progress(true, 100, true)
+                mProgressDialog = mBuilder.content("处理中,请稍后...")
+                        .contentColor(ContextCompat.getColor(this, R.color.colorAccent)).progress(true, 100, true)
                         .progressNumberFormat("%1d/%2d").canceledOnTouchOutside(false).build();
                 mProgressDialog.show();
 
-                mCalendar = Calendar.getInstance();
-
-                String dateStr = mCalendar.get(Calendar.YEAR) + "" + (mCalendar.get(Calendar.MONTH) + 1) + "" + mCalendar.get(Calendar.DAY_OF_MONTH);
-
-                Log.i(TAG, "=====dateStr====" + dateStr);
                 //获取视频源文件的后缀名
                 String fileName = input.substring(input.lastIndexOf("."));
-
-                fileName = (dateStr + fileName);
+                fileName = System.currentTimeMillis() + fileName;
                 Log.i(TAG, "=====fileName====" + fileName);
-                output = sdFile.getAbsolutePath() + File.separator + fileName;
+                output = getAppCachePath(fileName);
+
+                //水印是应用中ASSETS目录里的一张图片 应用启动时拷贝到外部存储卡目录中的
 
                 mExecutorService.execute(new Runnable() {
                     @Override
                     public void run() {
 
-
-                        String jniStr = "ffmpeg -i " + input + " -i " + sdFile.getAbsolutePath() +
-                                "/video_water.png -filter_complex overlay=50:" + (mDisplayMetrics.heightPixels - 150) + " " + output;
+                        String jniStr = "ffmpeg -i " + input + " -i " + getAppCachePath(Constant.WATER_MARK_DEFAULT) +
+                                " -filter_complex overlay=50:" + (mDisplayMetrics.heightPixels - 150) + " " + output;
 
                         Log.i(TAG, "=======jniStr======" + jniStr);
 
@@ -166,78 +269,45 @@ public class MarkActivity extends BaseActivity {
                     }
                 });
 
-
                 break;
         }
+    }
+
+
+    private String getAppCachePath(String filename) {
+        File sdcardFile = Environment.getExternalStorageDirectory();
+
+        return sdcardFile.getAbsolutePath() + File.separator + Constant.CACHE_FILE + File.separator + filename;
+    }
+
+    @Override
+    public void onItemClick(View view, int position, Object data) {
 
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.i(TAG, "=======onActivityResult()======");
-        if (requestCode == Constant.FLAG_SCAN_VIDEO_REQUEST_CODE) {
+    public void onItemFocus(int position, VideoModel model) {
+        LogUtils.i(TAG, "===onItemFocus===", false);
+        selectedIndex = position;
 
-            if (resultCode == RESULT_OK) {
-
-                Uri uri = data.getData();
-                ContentResolver cr = this.getContentResolver();
-                /** 数据库查询操作。
-                 * 第一个参数 uri：为要查询的数据库+表的名称。
-                 * 第二个参数 projection ： 要查询的列。
-                 * 第三个参数 selection ： 查询的条件，相当于SQL where。
-                 * 第三个参数 selectionArgs ： 查询条件的参数，相当于 ？。
-                 * 第四个参数 sortOrder ： 结果排序。
-                 */
-                Cursor cursor = cr.query(uri, null, null, null, null);
-                if (cursor != null) {
-                    if (cursor.moveToFirst()) {
-                        // 视频ID:MediaStore.Audio.Media._ID
-                        int videoId = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID));
-                        // 视频名称：MediaStore.Audio.Media.TITLE
-                        String title = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.TITLE));
-                        // 视频路径：MediaStore.Audio.Media.DATA
-                        input = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA));
-                        // 视频时长：MediaStore.Audio.Media.DURATION
-                        int duration = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION));
-                        // 视频大小：MediaStore.Audio.Media.SIZE
-                        long size = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE));
-                        Log.i(TAG, videoId + "======video======" + duration);
-                        // 视频缩略图路径：MediaStore.Images.Media.DATA
-                        String imagePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA));
-                        // 缩略图ID:MediaStore.Audio.Media._ID
-                        int imageId = cursor.getInt(cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
-                        // 方法一 Thumbnails 利用createVideoThumbnail 通过路径得到缩略图，保持为视频的默认比例
-                        // 第一个参数为 ContentResolver，第二个参数为视频缩略图ID， 第三个参数kind有两种为：MICRO_KIND和MINI_KIND 字面意思理解为微型和迷你两种缩略模式，前者分辨率更低一些。
-                        //Bitmap bitmap1 = MediaStore.Video.Thumbnails.getThumbnail(cr, imageId, MediaStore.Video.Thumbnails.MICRO_KIND, null);
-
-
-                        // 方法二 ThumbnailUtils 利用createVideoThumbnail 通过路径得到缩略图，保持为视频的默认比例
-                        // 第一个参数为 视频/缩略图的位置，第二个依旧是分辨率相关的kind
-                        Bitmap bitmap2 = ThumbnailUtils.createVideoThumbnail(imagePath, MediaStore.Video.Thumbnails.MINI_KIND);
-                        // 如果追求更好的话可以利用 ThumbnailUtils.extractThumbnail 把缩略图转化为的制定大小
-                        //ThumbnailUtils.extractThumbnail(bitmap2, 100,100 ,ThumbnailUtils.OPTIONS_RECYCLE_INPUT);
-
-
-                        ivCover.setImageBitmap(bitmap2);
-                        tvTitle.setText(input);
-
-
-                        if (!tvFinish.isEnabled()) {
-                            tvChoose.setText("重新选择");
-
-                            tvFinish.setEnabled(true);
-                            tvFinish.setClickable(true);
-                            tvFinish.setBackground(ContextCompat.getDrawable(this, R.drawable.button_bg_red));
-                        }
-
-
-                    }
-                    cursor.close();
-                }
-            }
+        if (gsvPlayer.isInPlayingState()) {
+            gsvPlayer.onVideoReset();
         }
+        gsvPlayer.setUp(model.path, true, model.title);
+        gsvPlayer.startPlayLogic();
+    }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
 
+        gsvPlayer.onVideoPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        gsvPlayer.release();
+        super.onDestroy();
     }
 }

@@ -1,10 +1,18 @@
 package com.gordan.helloffmpeg.model;
 
-public class MusicModel {
+import com.gordan.baselibrary.model.BaseModel;
 
+public class MusicModel extends BaseModel
+{
     public int id;
 
     public String name;
+
+    public String path;
+
+    public long duration;
+
+    public long time;
 
     public int status;
 

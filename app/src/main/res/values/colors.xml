@@ -4,6 +4,10 @@
     <color name="colorPrimaryDark">#d81e06</color>
     <color name="colorAccent">#D81B60</color>
 
+    <color name="yellow">#E6C82C</color>
+
+    <color name="app_theme">#272727</color>
+
     <color name="menu_default">#2c2c2c</color>
     <color name="menu_selected">#d81e06</color>
 
@@ -11,4 +15,13 @@
 
     <color name="button_gray">#7F7F7F</color>
 
+    <color name="menu_bg_1">#74DDE3</color>
+    <color name="menu_bg_2">#8A6EFF</color>
+    <color name="menu_bg_3">#FB8AA8</color>
+    <color name="menu_bg_4">#578FFE</color>
+
+    <color name="menu_bg_5">#A22FEF</color>
+    <color name="menu_bg_6">#FAAF22</color>
+    <color name="menu_bg_7">#36D2AB</color>
+    <color name="menu_bg_8">#25C0F8</color>
 </resources>

@@ -16,6 +16,7 @@ import android.view.View;
 
 import com.gordan.baselibrary.BaseActivity;
 import com.gordan.baselibrary.util.ImageUtils;
+import com.gordan.baselibrary.util.LogUtils;
 import com.gordan.baselibrary.util.ScreenUtils;
 import com.gordan.helloffmpeg.util.Constant;
 import com.gordan.helloffmpeg.view.CameraView;
@@ -64,19 +65,24 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     protected void handleBaseMessage(Message message) {
 
         switch (message.what) {
-            case Constant.MSG_TAKE_PICTURE:
+            case Constant.MSG_TAKE_PICTURE_FINISHED:
+
+                showText("拍照完成，照片路径:"+message.obj);
+
                 shootSound("file:///system/media/audio/ui/camera_click.ogg");
                 mCameraView.onResume();
 
                 break;
         }
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG,"=====onResume()=====");
+        Log.i(TAG, "=====onResume()=====");
+
+        showText("触摸屏幕可以对焦~");
+
         mCameraView.onResume();
     }
 
@@ -126,7 +132,6 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
                 Point point = new Point((int) rawX, (int) rawY);
                 mCameraView.onFocus(point, screenWidth, screenHeight, null);
         }
-
         return true;
     }
 
@@ -142,8 +147,10 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     public void onPictureTaken(byte[] data, Camera camera) {
         Log.i(TAG, "====take picture callback====");
         try {
-
-            File imageFile = new File(sdcardFile, "gordan_0814.jpg");
+            String path = sdcardFile.getAbsolutePath() + File.separator + Constant.CACHE_FILE +
+                    File.separator + System.currentTimeMillis() + ".jpg";
+            LogUtils.i(TAG, "==path==" + path, false);
+            File imageFile = new File(path);
             if (!imageFile.exists()) {
 
                 if (!imageFile.createNewFile()) {
@@ -160,9 +167,12 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
 
                     Bitmap normalBitmap = ImageUtils.getRotateBitmap(bitmap, 90.0f);
 
-                    ImageUtils.saveBitmap2File(normalBitmap,imageFile);
+                    ImageUtils.saveBitmap2File(normalBitmap, imageFile);
 
-                    mHandler.sendEmptyMessage(Constant.MSG_TAKE_PICTURE);
+                    Message msg=new Message();
+                    msg.what=Constant.MSG_TAKE_PICTURE_FINISHED;
+                    msg.obj=path;
+                    mHandler.sendMessage(msg);
 
                 }
             }).start();
@@ -221,7 +231,6 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
             e.printStackTrace();
         }
     }
-
 
 
 }

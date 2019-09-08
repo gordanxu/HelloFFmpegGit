@@ -25,4 +25,9 @@ public class FfmpegUtil {
 
     public native void mergeVideoAndAudio(String inputVideo,String inputAudio,String outputMedia);
 
+    public native void separateVideoAndAudio(String inputTs,String outputVideo,String outputAudio);
+
+    public native void convertMediaFormat(String input,String output);
+
+
 }
