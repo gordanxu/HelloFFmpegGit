@@ -27,6 +27,10 @@ public class Constant {
 
     public static final int MSG_TAKE_PICTURE_FINISHED=10017;
 
+    public static final int MSG_TAKE_VIDEO_START=10018;
+
+    public static final int MSG_TAKE_VIDEO_END=10019;
+
     public static final int FLAG_SCAN_VIDEO_REQUEST_CODE=20000;
 
     public static final int FLAG_SCAN_VIDEO_RESULT_CODE=20001;

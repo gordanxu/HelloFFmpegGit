@@ -1,5 +1,6 @@
 package com.gordan.helloffmpeg;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Point;
@@ -32,6 +33,11 @@ import butterknife.OnClick;
  * 拍照保存的功能 还是使用了原版的老方法 只是捕捉到了摄像头的画面滤镜的效果并没有保存到照片中
  *
  *
+ *
+ * 录像的时候最多只能录制 15 秒
+ *
+ *
+ *
  * ***/
 public class FilterActivity extends BaseActivity implements View.OnTouchListener,
         SensorControler.CameraFocusListener, Camera.PictureCallback {
@@ -44,6 +50,8 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     int screenWidth, screenHeight;
 
     File sdcardFile;
+
+    boolean recordFlag;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -65,10 +73,23 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
     protected void handleBaseMessage(Message message) {
 
         switch (message.what) {
+
+            case Constant.MSG_TAKE_VIDEO_END:
+
+
+                String savePath = message.obj + "";
+
+                mCameraView.stopRecord();
+                recordFlag = false;
+                showText("拍摄完成，视频保存路径:" + savePath);
+
+                break;
+
             case Constant.MSG_TAKE_PICTURE_FINISHED:
 
-                showText("拍照完成，照片路径:"+message.obj);
-
+                showText("拍照完成，照片保存路径:" + message.obj);
+                //通知Android系统保存拍摄的视频文件记录到MediaStore数据库中
+                sendBroadcastMedia(message.obj+"");
                 shootSound("file:///system/media/audio/ui/camera_click.ogg");
                 mCameraView.onResume();
 
@@ -86,9 +107,37 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
         mCameraView.onResume();
     }
 
-    @OnClick({R.id.tv_filter_sun, R.id.tv_filter_cool, R.id.tv_filter_warm, R.id.iv_photo})
+    @OnClick({R.id.tv_filter_sun, R.id.tv_filter_cool, R.id.tv_filter_warm, R.id.iv_photo, R.id.iv_video})
     public void onViewClick(View view) {
         switch (view.getId()) {
+
+            case R.id.iv_video:
+
+                String fileName = System.currentTimeMillis() + ".mp4";
+                String savePath = sdcardFile.getAbsolutePath() + File.separator + Constant.CACHE_FILE + File.separator + fileName;
+
+                Message message = new Message();
+                message.what = Constant.MSG_TAKE_VIDEO_END;
+                message.obj = savePath;
+
+                if (!recordFlag) {
+                    showText("开始拍摄，再按一次结束拍摄！");
+                    mCameraView.setSavePath(savePath);
+                    mCameraView.startRecord();
+                    recordFlag = true;
+
+                    mHandler.sendMessageDelayed(message, Constant.VIDEO_TAKE_MAX_TIME);
+                } else {
+                    if (mHandler.hasMessages(Constant.MSG_TAKE_VIDEO_END)) {
+                        mHandler.removeMessages(Constant.MSG_TAKE_VIDEO_END);
+                    }
+                    mHandler.sendMessage(message);
+
+                }
+
+
+                break;
+
             case R.id.iv_photo:
 
                 mCameraView.takePicture(this);
@@ -140,7 +189,12 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
 
         Point point = new Point(screenWidth / 2, screenHeight / 2);
         mCameraView.onFocus(point, screenWidth, screenHeight, null);
+    }
 
+    private void sendBroadcastMedia(String path)
+    {
+        Intent intent=new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,Uri.fromFile(new File(path)));
+        this.sendBroadcast(intent);
     }
 
     @Override
@@ -169,9 +223,9 @@ public class FilterActivity extends BaseActivity implements View.OnTouchListener
 
                     ImageUtils.saveBitmap2File(normalBitmap, imageFile);
 
-                    Message msg=new Message();
-                    msg.what=Constant.MSG_TAKE_PICTURE_FINISHED;
-                    msg.obj=path;
+                    Message msg = new Message();
+                    msg.what = Constant.MSG_TAKE_PICTURE_FINISHED;
+                    msg.obj = path;
                     mHandler.sendMessage(msg);
 
                 }

@@ -18,6 +18,8 @@ import javax.microedition.khronos.opengles.GL10;
 public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
         SurfaceTexture.OnFrameAvailableListener {
 
+    private Context mContext;
+
     private CameraDrawer mCameraDrawer;
 
     private CameraController mCamera;
@@ -30,10 +32,12 @@ public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
 
     public CameraView(Context context) {
         this(context, null);
+        this.mContext=context;
     }
 
     public CameraView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        this.mContext=context;
         init();
     }
 
@@ -46,7 +50,7 @@ public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
         setCameraDistance(100);//相机距离
 
         /**初始化Camera的绘制类*/
-        mCameraDrawer = new CameraDrawer(getResources());
+        mCameraDrawer = new CameraDrawer(this.mContext);
         /**初始化相机的管理类*/
         mCamera = new CameraController();
 
@@ -121,6 +125,46 @@ public class CameraView extends GLSurfaceView implements GLSurfaceView.Renderer,
 
     public int getCameraId() {
         return cameraId;
+    }
+
+    public void startRecord() {
+        queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mCameraDrawer.startRecord();
+            }
+        });
+    }
+
+    public void stopRecord() {
+        queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mCameraDrawer.stopRecord();
+            }
+        });
+    }
+
+    public void setSavePath(String path) {
+        mCameraDrawer.setSavePath(path);
+    }
+
+    public void resume(final boolean auto) {
+        queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mCameraDrawer.onResume(auto);
+            }
+        });
+    }
+
+    public void pause(final boolean auto) {
+        queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mCameraDrawer.onPause(auto);
+            }
+        });
     }
 
 

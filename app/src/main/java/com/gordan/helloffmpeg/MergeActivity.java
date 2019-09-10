@@ -162,10 +162,8 @@ public class MergeActivity extends BaseActivity {
 
                 if (category == 1) {
                     //分离
-                    showDialog("音视频分离中,请稍后...");
                     input = etSourceMedia.getText() + "";
                 } else {
-                    showDialog("因视频合并中,请稍后...");
                     input = etDestMedia.getText() + "";
                 }
                 if(TextUtils.isEmpty(input))
@@ -185,6 +183,14 @@ public class MergeActivity extends BaseActivity {
                 if(TextUtils.isEmpty(audio))
                 {
                     showText("音频文件路径不能为空！");
+                    break;
+                }
+
+                if (category == 1) {
+                    //分离
+                    showDialog("音视频分离中,请稍后...");
+                } else {
+                    showDialog("因视频合并中,请稍后...");
                 }
 
                 mExecutorService.execute(new Runnable() {
