@@ -5,6 +5,8 @@ import android.content.Context;
 import android.view.Window;
 import android.view.WindowManager;
 
+import java.lang.reflect.Field;
+
 public class ScreenUtils {
 
     public static int getScreenW(Context context) {
@@ -12,7 +14,7 @@ public class ScreenUtils {
     }
 
     public static int getScreenH(Context context) {
-        return context.getResources().getDisplayMetrics().widthPixels;
+        return context.getResources().getDisplayMetrics().heightPixels;
     }
 
     public static int getScreenDpi(Context context) {
@@ -70,6 +72,26 @@ public class ScreenUtils {
         return (int) (pxValue / fontScale + 0.5f);
     }
 
+
+    /***
+     *
+     * 获取手机状态栏高度
+     *
+     * @param context
+     * @return
+     */
+    public static int getStatusBarHeight(Context context) {
+        try {
+            Class<?> c = Class.forName("com.android.internal.R$dimen");
+            Object o = c.newInstance();
+            Field field = c.getField("status_bar_height");
+            int x = (Integer) field.get(o);
+            return context.getResources().getDimensionPixelSize(x);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 
     /**
      * 让屏幕变暗
